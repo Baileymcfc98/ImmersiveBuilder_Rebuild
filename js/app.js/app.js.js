@@ -24,5 +24,5 @@ window.addEventListener("DOMContentLoaded", () => {
     Toolbar.init();
 
     // Test item (optional)
-    // ItemFactory.createItem("text", { text: "Hello" });
+    ItemFactory.createItem("text", { text: "Hello world" });
 });
