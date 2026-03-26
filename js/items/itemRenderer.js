@@ -49,6 +49,10 @@ export function renderItem(item, type, options) {
 
     // --- BUILD STRUCTURE ---
     item.appendChild(content);
+   item.style.border = "2px solid red";
+item.style.background = "rgba(255,0,0,0.2)";
+item.style.width = "200px";
+item.style.height = "100px";
     item.appendChild(nw);
     item.appendChild(ne);
     item.appendChild(sw);
