@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+}
+
+/* TOP BAR */
+#top-bar {
+    height: 60px;
+    background: #222;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    color: white;
+}
+
+/* LEFT DOCK */
+#left-dock {
+    width: 200px;
+    background: #1a1a1a;
+    height: calc(100vh - 60px);
+    position: absolute;
+    top: 60px;
+    left: 0;
+    padding: 10px;
+    color: white;
+}
+
+/* STAGE */
+#stage-container {
+    position: absolute;
+    left: 200px;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    background: black;
+}
+
+#stage {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+#draw-layer {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+}
