@@ -63,7 +63,6 @@ export const PointerEngine = (() => {
     }
 
     function normaliseEvent(e) {
-        const rect = document.body.getBoundingClientRect();
         return {
             x: e.clientX,
             y: e.clientY,
@@ -89,3 +88,4 @@ export const PointerEngine = (() => {
     };
 
 })();
+``
