@@ -1,41 +1,91 @@
-Do NOT type the folder path in the filename.
-Instead FOLLOW these steps:
-✅ 1. In Notepad, click:
-File → Save As…
-✅ 2. A Save dialog opens
-On the LEFT side of the window:
-Click through your folders:
+/* ============================================================
+   POINTER ENGINE (Single‑Touch Version)
+   ============================================================ */
 
-Documents (or Desktop)
-ImmersiveBuilder_Rebuild
-js
-pointer
+export const PointerEngine = (() => {
 
-You should now see in the address bar:
-…/ImmersiveBuilder_Rebuild/js/pointer
+    let activePointerId = null;
+    let isPointerActive = false;
 
-✅ This means you're in the right folder
-✅ ONLY NOW you type the file name
-✅ 3. At the bottom of the Save window:
+    const subscribers = {
+        down: [],
+        move: [],
+        up: []
+    };
 
+    const frameQueue = {
+        move: null
+    };
 
-File name:
-pointerEngine.js
+    function onPointer(type, callback) {
+        if (subscribers[type]) {
+            subscribers[type].push(callback);
+        }
+    }
 
+    function emit(type, eventData) {
+        if (!subscribers[type]) return;
+        subscribers[type].forEach(cb => cb(eventData));
+    }
 
+    function handlePointerDown(e) {
+        if (activePointerId !== null && e.pointerId !== activePointerId) return;
 
-Save as type:
-Select All Files (.)
-(Super important — stops Notepad adding .txt)
+        activePointerId = e.pointerId;
+        isPointerActive = true;
 
+        const data = normaliseEvent(e);
+        emit("down", data);
+    }
 
-Encoding:
-UTF‑8 (if the option exists)
+    function handlePointerMove(e) {
+        if (!isPointerActive || e.pointerId !== activePointerId) return;
 
+        frameQueue.move = e;
 
-✅ 4. Click Save
-DONE ✅
-You now have:
-ImmersiveBuilder_Rebuild/js/pointer/pointerEngine.js
+        requestAnimationFrame(() => {
+            if (!frameQueue.move) return;
 
-🎉 This is the first fully working module of your new, clean project.
+            const data = normaliseEvent(frameQueue.move);
+            emit("move", data);
+            frameQueue.move = null;
+        });
+    }
+
+    function handlePointerUp(e) {
+        if (e.pointerId !== activePointerId) return;
+
+        const data = normaliseEvent(e);
+        emit("up", data);
+
+        activePointerId = null;
+        isPointerActive = false;
+    }
+
+    function normaliseEvent(e) {
+        const rect = document.body.getBoundingClientRect();
+        return {
+            x: e.clientX,
+            y: e.clientY,
+            target: e.target,
+            original: e
+        };
+    }
+
+    function initPointerEngine(rootElement = document.body) {
+        rootElement.style.touchAction = "none";
+
+        rootElement.addEventListener("pointerdown", handlePointerDown, { passive: true });
+        rootElement.addEventListener("pointermove", handlePointerMove, { passive: true });
+        rootElement.addEventListener("pointerup", handlePointerUp, { passive: true });
+        rootElement.addEventListener("pointercancel", handlePointerUp, { passive: true });
+    }
+
+    return {
+        init: initPointerEngine,
+        onDown: cb => onPointer("down", cb),
+        onMove: cb => onPointer("move", cb),
+        onUp: cb => onPointer("up", cb)
+    };
+
+})();
