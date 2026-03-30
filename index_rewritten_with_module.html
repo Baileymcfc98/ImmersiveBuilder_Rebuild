@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Immersive Lesson Builder v2</title>
+  <style>
+    :root{
+      --bg:#071019;
+      --panel:rgba(14,20,30,.96);
+      --panel-soft:rgba(255,255,255,.08);
+      --text:#f4f7fb;
+      --muted:rgba(255,255,255,.72);
+      --white:rgba(255,255,255,.96);
+      --dark:#101828;
+      --accent:#7dd3fc;
+      --success:#b8f5c4;
+      --danger:#ffd4d4;
+      --warn:#ffe7a8;
+      --grid:rgba(255,255,255,.08);
+    }
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);
+      font-family:Arial,sans-serif;color:var(--text);
+      overscroll-behavior:none;
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+    }
+    button,select,input,textarea{font-family:inherit}
+    #stage{
+      overscroll-behavior:none;
+      touch-action:none;
+      -webkit-user-select:none;
+      user-select:none;
+      -webkit-touch-callout:none;
+    }
+    #stage{
+      position:relative;width:100vw;height:100vh;overflow:hidden;
+      background-repeat:no-repeat;background-position:center center;background-size:contain;
+      background-image:
+        radial-gradient(circle at 50% 25%, rgba(125,211,252,.08), transparent 28%),
+        radial-gradient(circle at 80% 80%, rgba(255,255,255,.05), transparent 25%),
+        url('background.jpg'),
+        linear-gradient(180deg,#08111b 0%,#05090f 100%);
+      background-color:#05090f;
+    }
+    #stageVideoBg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;z-index:0;pointer-events:none;background:#000;}
+    #gridOverlay,#safeZoneOverlay,#drawLayer{position:absolute;inset:0;width:100%;height:100%;}
+    #gridOverlay{z-index:5;pointer-events:none;display:none;background-image:linear-gradient(to right,var(--grid) 1px,transparent 1px),linear-gradient(to bottom,var(--grid) 1px,transparent 1px);background-size:20px 20px}
+    #safeZoneOverlay{z-index:6;pointer-events:none;display:none}
+    #safeZoneOverlay .wall{position:absolute;top:14%;bottom:14%;border:2px dashed rgba(255,255,255,.2);border-radius:16px}
+    #safeZoneOverlay .wall-label{position:absolute;top:-26px;left:10px;font-size:12px;font-weight:700;color:rgba(255,255,255,.8)}
+    #safeZoneOverlay .left{left:6%;width:21%}
+    #safeZoneOverlay .centre{left:28.5%;width:43%}
+    #safeZoneOverlay .right{right:6%;width:21%}
+    #spotlightOverlay{position:absolute;inset:0;background:rgba(0,0,0,.42);z-index:18;display:none;pointer-events:none;}
+    #spotlightHole{position:absolute;border-radius:24px;background:transparent;box-shadow:0 0 0 9999px rgba(0,0,0,.42);pointer-events:none;}
+    #drawLayer{z-index:20;pointer-events:none;touch-action:none;}
+
+    body.presentation-mode #sidebar,
+    body.presentation-mode #topControls,
+    body.presentation-mode #teacherMenu,
+    body.presentation-mode #annotateToolbar,
+    body.presentation-mode #modeHint,
+    body.presentation-mode #workspaceHint,
+    body.presentation-mode #floatingToolbar,
+    body.presentation-mode #propertiesPanel,
+    body.presentation-mode #hotspotEditor,
+    body.presentation-mode #questionEditor,
+    body.presentation-mode #cloneBin,
+    body.presentation-mode #sidebarReopenBtn,
+    body.presentation-mode #scenePanel,
+    body.presentation-mode #layersPanel,
+    body.presentation-mode #historyPanel,
+    body.presentation-mode #statusBar{display:none!important;}
+
+body.run-mode .folderItem,
+body.run-mode #folderContent,
+body.run-mode #folderContentTitle,
+body.run-mode #folderTree,
+body.run-mode #earlyYearsWrap,
+body.run-mode #earlyYearsFoldersWrap,
+body.run-mode #widgetsWrap {
+  display:none !important;
+}
+
+body.run-mode #sidebar,
+body.run-mode #topControls,
+body.run-mode #scenePanel,
+body.run-mode #scenePanelReopenBtn,
+body.run-mode #layersPanel,
+body.run-mode #historyPanel,
+body.run-mode #propertiesPanel,
+body.run-mode #hotspotEditor,
+body.run-mode #questionEditor,
+body.run-mode #cloneBin,
+body.run-mode #modeHint,
+body.run-mode #workspaceHint,
+body.run-mode #statusBar,
+body.run-mode #sidebarReopenBtn {
+  display:none !important;
+}
+
+#liveQuickTools{display:none}
+
+body.run-mode #teacherToggle{
+  display:flex !important;
+  align-items:center;
+  justify-content:center;
+  top:18px;
+  right:20px;
+  width:48px;
+  height:48px;
+  border-radius:14px;
+  background:rgba(14,20,30,.88);
+  color:var(--white);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 12px 24px rgba(0,0,0,.28);
+  backdrop-filter:blur(10px);
+}
+
+body.run-mode #liveQuickTools{
+  position:absolute;
+  top:18px;
+  left:20px;
+  z-index:63;
+  display:flex !important;
+  align-items:center;
+  gap:8px;
+}
+
+.liveQuickBtn{
+  width:52px;
+  height:52px;
+  border:none;
+  border-radius:12px;
+  background:rgba(14,20,30,.88);
+  color:var(--white);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 10px 20px rgba(0,0,0,.24);
+  backdrop-filter:blur(10px);
+  font-size:18px;
+  cursor:pointer;
+}
+
+.liveQuickBtn.active{
+  outline:2px solid rgba(255,255,255,.9);
+  outline-offset:1px;
+}
+
+#liveBackgroundMenu{
+  position:absolute;
+  top:18px;
+  left:72px;
+  z-index:1002;
+  min-width:240px;
+  padding:8px;
+  border-radius:14px;
+  background:var(--panel);
+  border:1px solid var(--panel-soft);
+  box-shadow:0 14px 28px rgba(0,0,0,.28);
+  display:none;
+  flex-direction:column;
+  gap:6px;
+}
+#liveBackgroundMenu.open{display:flex}
+
+    #sidebar{
+      position:absolute;top:0;left:0;width:330px;height:100%;z-index:40;display:flex;flex-direction:column;
+      background:linear-gradient(180deg, rgba(15,23,35,.95), rgba(10,15,24,.95));
+      border-right:1px solid rgba(255,255,255,.10);box-shadow:10px 0 28px rgba(0,0,0,.28);
+      backdrop-filter:blur(10px);transition:transform .22s ease;
+    }
+    #sidebar.collapsed{transform:translateX(calc(-100% - 20px))}
+    #sidebarHeader{padding:18px 16px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:24px;font-weight:700;}
+    #sidebarHeaderTitle{flex:1;min-width:0}
+    #sidebarCollapseBtn,#sidebarReopenBtn,#teacherToggle{
+      width:50px;height:50px;border:none;border-radius:12px;background:var(--white);color:var(--dark);
+      font-size:18px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.14);
+    }
+    #sidebarReopenBtn{position:absolute;top:18px;left:20px;z-index:62;display:none}
+    #sidebarReopenBtn.visible{display:block}
+    #folderTree{padding:14px;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08)}
+    .folderBtn{width:100%;text-align:left;padding:14px 16px;margin-bottom:10px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.06);color:var(--text);font-size:16px;line-height:1.2;cursor:pointer;touch-action:manipulation}
+    .folderBtn.active{background:rgba(255,255,255,.16);border-color:rgba(125,211,252,.28)}
+    .folderLevel2{margin-left:14px}.folderLevel3{margin-left:28px;font-size:14px}
+    #folderContentTitle{display:none;padding:10px 16px 8px;font-size:15px;font-weight:700;color:var(--muted)}
+    #folderContent{display:none;flex:1;overflow-y:auto;padding:0 12px 14px}
+    .folderGrid{display:none;grid-template-columns:1fr 1fr;gap:12px}.folderGrid.active{display:grid}
+    #folder-widgets{grid-template-columns:1fr}
+    .folderSlot{min-height:116px;border-radius:16px;border:1px dashed rgba(255,255,255,.14);background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));display:flex;align-items:center;justify-content:center;position:relative;padding:8px;pointer-events:none;overflow:visible}
+    #folder-widgets .folderSlot{min-height:88px}
+
+  #topControls{position:absolute;top:18px;left:354px;right:170px;z-index:35;display:flex;flex-wrap:wrap;gap:10px;transition:left .22s ease;align-items:center;padding:0}
+#topControls.sidebar-collapsed{left:84px;right:170px}
+.modeBtn{min-width:118px;height:52px;padding:0 16px;border:1px solid rgba(0,0,0,.08);border-radius:14px;background:var(--white);color:var(--dark);font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;gap:8px}
+.modeBtn.active{outline:3px solid rgba(16,24,40,.96);outline-offset:1px}
+.dropdownWrap{position:relative;display:inline-block}
+.dropdownBtn{min-width:190px;height:52px;padding:0 16px;border:none;border-radius:14px;background:var(--white);color:var(--dark);font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.dropdownMenu{position:absolute;top:56px;left:0;min-width:260px;padding:8px;border-radius:14px;background:var(--panel);border:1px solid var(--panel-soft);box-shadow:0 14px 28px rgba(0,0,0,.28);display:none;flex-direction:column;gap:6px;z-index:80}
+.dropdownMenu.open{display:flex}
+.dropdownItem{min-height:42px;border:none;border-radius:10px;background:var(--white);color:var(--dark);font-size:14px;font-weight:700;cursor:pointer;text-align:left;padding:10px 12px}
+#builderButtons{display:flex;flex-wrap:wrap;gap:10px}
+#projectControls{position:absolute;top:18px;right:186px;z-index:59;display:flex;align-items:center;gap:10px;transition:right .22s ease}
+#projectControls.scene-panel-open{right:516px}
+#teacherToggle.scene-panel-open{right:348px}
+#teacherMenu.scene-panel-open{right:348px}
+#scenePanelReopenBtn.scene-panel-open{right:20px}
+#projectMenuBtn{min-width:150px}
+#projectMenu{left:auto;right:0;min-width:240px}
+
+#modeCreateActivity,
+#modeAddQuestion,
+#modeAddHotspot,
+#modeAddMedia,
+#textToolBtn{display:none}
+
+    #teacherToggle{position:absolute;top:18px;right:86px;z-index:60;font-size:20px}
+    #teacherMenu,#scenePanel,#layersPanel,#historyPanel,#annotateToolbar,#hotspotEditor,#questionEditor,#propertiesPanel{position:absolute;z-index:1000;padding:14px;border-radius:18px;background:var(--panel);border:1px solid var(--panel-soft);box-shadow:0 16px 34px rgba(0,0,0,.34);backdrop-filter:blur(10px)}
+    #teacherMenu{top:72px;right:86px;display:none;width:280px;transition:right .22s ease}.open{display:block!important}
+    .teacherGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .teacherBtn,.panelBtn{min-height:52px;border:none;border-radius:12px;background:var(--white);color:var(--dark);font-size:15px;font-weight:700;cursor:pointer;padding:10px 12px;text-align:center;touch-action:manipulation}
+
+    #annotateToolbar{top:76px;left:354px;z-index:36;display:none;align-items:center;gap:10px;padding:10px 12px;transition:left .22s ease;flex-wrap:wrap}
+    #annotateToolbar.visible{display:flex}#annotateToolbar.sidebar-collapsed{left:84px}
+    .annotateLabel{font-weight:700;color:white}
+    #penColorSelect,#eraserSizeSelect,#clearInkInlineBtn,#sceneSearchInput,#sceneSelect,#sceneFileName,#propTextStyle,#propMediaStyle,#propBgFit,#propAnim,#propTriggerAction,#propTriggerTarget,#propQuestionMode{width:100%;box-sizing:border-box;border:none;border-radius:10px;padding:10px 12px;font-size:14px;background:rgba(255,255,255,.96);color:#111827}
+
+    #workspaceHint{position:absolute;top:128px;left:354px;right:20px;bottom:42px;z-index:1;border:1px dashed rgba(255,255,255,.10);border-radius:22px;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));pointer-events:none;transition:left .22s ease}
+    #workspaceHint.sidebar-collapsed{left:84px}
+    #modeHint{position:absolute;top:128px;left:354px;z-index:36;padding:10px 14px;border-radius:14px;background:rgba(14,20,30,.92);border:1px solid rgba(255,255,255,.08);color:white;font-weight:700;box-shadow:0 8px 18px rgba(0,0,0,.14);transition:left .22s ease}
+    #modeHint.sidebar-collapsed{left:84px}
+    #statusBar{position:absolute;left:354px;right:20px;bottom:10px;z-index:36;padding:8px 12px;border-radius:14px;background:rgba(14,20,30,.92);border:1px solid rgba(255,255,255,.08);font-size:13px;color:rgba(255,255,255,.85);display:flex;justify-content:space-between;gap:10px;transition:left .22s ease}
+    #statusBar.sidebar-collapsed{left:84px}
+
+    #cloneBin{position:absolute;right:26px;bottom:56px;width:180px;height:110px;z-index:34;border-radius:22px;border:2px dashed rgba(255,255,255,.22);background:rgba(20,10,10,.45);color:white;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:700;line-height:1.3;pointer-events:none}
+    #cloneBin.active{background:rgba(120,20,20,.75);border-color:rgba(255,255,255,.5)}
+
+    .folderItem{position:absolute;z-index:45;height:auto;cursor:grab;touch-action:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 4px 10px rgba(0,0,0,.18))}
+    .item,.group-box{position:absolute;z-index:80;transform-origin:center center;touch-action:none;user-select:none}
+    .group-box{border:2px dashed rgba(125,211,252,.6);border-radius:18px;pointer-events:none;display:none}
+    .dragShell{position:relative;width:100%;height:100%;border-radius:18px;opacity:1}
+    .stageImage{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;-webkit-user-drag:none;filter:drop-shadow(0 10px 18px rgba(0,0,0,.24))}
+    .widgetCard,.questionCardInner{position:absolute;inset:0;border-radius:18px;background:rgba(14,20,30,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 12px 24px rgba(0,0,0,.22);color:white;overflow:hidden}
+    .widgetCard.no-card,.questionCardInner.no-card{background:transparent;border:none;box-shadow:none}
+    .widgetHeader,.questionHeader{padding:10px 14px;font-weight:700;background:rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);text-align:center;font-size:14px}
+    .widgetCard.no-card .widgetHeader{display:none}
+    .widgetBody,.questionBody{padding:12px;display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;width:100%;height:calc(100% - 40px);align-content:flex-start}
+    .widgetCard.no-card .widgetBody{height:100%;padding:0}
+    .widgetMiniBtn{width:52px;height:52px;border:none;border-radius:12px;background:var(--white);color:var(--dark);font-size:22px;font-weight:700;cursor:pointer;touch-action:manipulation}
+    .widgetActionBtn{min-width:132px;height:52px;border:none;border-radius:12px;background:var(--white);color:var(--dark);font-size:16px;font-weight:700;cursor:pointer;padding:0 16px;touch-action:manipulation}
+    .widgetValue{min-width:76px;height:52px;border-radius:12px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.08);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;padding:0 12px}
+    .widgetTeamCol{display:flex;flex-direction:column;gap:8px;align-items:center;min-width:120px}.widgetTeamTitle{font-weight:700}
+    .textBoxArea{width:100%;min-height:120px;border:none;resize:none;border-radius:10px;padding:12px;font-size:18px;line-height:1.4;background:rgba(255,255,255,.96);color:#111827}
+    .mediaUrlInput,.mediaPosterInput,.questionOptionInput{width:100%;border:none;border-radius:10px;padding:10px 12px;font-size:14px;background:rgba(255,255,255,.96);color:#111827}
+    .mediaFrameWrap{width:100%;height:220px;border-radius:12px;overflow:hidden;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);position:relative}
+    .widgetCard.no-card .mediaFrameWrap{border:none;background:transparent}
+    .mediaFrame,.mediaVideo{width:100%;height:100%;border:none;background:#000;display:none}.mediaImage{display:none;width:100%;height:100%;object-fit:contain;background:#000}
+    .mediaFallback{display:none;width:100%;height:100%;padding:14px;color:white;text-align:center;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+    .mediaOpenLink{display:inline-block;padding:10px 14px;border-radius:10px;background:white;color:#111827;font-weight:700;text-decoration:none}
+    .questionPrompt{width:100%;min-height:80px;border-radius:10px;background:rgba(255,255,255,.96);color:#111827;padding:12px;font-size:18px;line-height:1.4}
+    .questionOptions{width:100%;display:grid;gap:8px;margin-top:10px}
+    .questionOptionBtn{width:100%;min-height:58px;border:none;border-radius:12px;background:rgba(255,255,255,.96);color:#101828;font-size:17px;font-weight:700;text-align:left;padding:14px 16px;cursor:pointer;touch-action:manipulation}
+    .item,.folderItem,.hotspot,.resizeHandle,.rotateHandle,.liveQuickBtn,.teacherBtn,.panelBtn,.modeBtn,.dropdownBtn,.dropdownItem,.miniAction,.questionOptionBtn,.widgetMiniBtn,.widgetActionBtn{-webkit-tap-highlight-color:transparent}
+    .questionOptionBtn.correct{background:var(--success)}.questionOptionBtn.incorrect{background:var(--danger)}
+    .questionFeedback{width:100%;min-height:40px;border-radius:10px;background:rgba(255,255,255,.08);color:white;padding:10px 12px;font-size:14px;line-height:1.4;margin-top:10px;display:none}
+
+    .hotspot{position:absolute;width:46px;height:46px;border-radius:50%;background:rgba(255,208,0,.95);color:#111;font-weight:700;font-size:18px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px rgba(0,0,0,.25);cursor:grab;z-index:95;touch-action:none;user-select:none;white-space:nowrap}
+    .selectionBox{position:absolute;inset:-6px;border:2px solid #fff;border-radius:20px;pointer-events:none;display:none}
+    .item.selected .selectionBox,.item.multi .selectionBox{display:block}
+    .item.multi .selectionBox{border-style:dashed}
+    .resizeHandle,.rotateHandle,.moveHandle{position:absolute;width:26px;height:26px;border-radius:50%;background:#fff;border:2px solid #111827;pointer-events:auto;touch-action:none}
+    .resizeHandle.nw{left:-14px;top:-14px;cursor:nwse-resize}.resizeHandle.ne{right:-14px;top:-14px;cursor:nesw-resize}.resizeHandle.sw{left:-14px;bottom:-14px;cursor:nesw-resize}.resizeHandle.se{right:-14px;bottom:-14px;cursor:nwse-resize}
+    .rotateHandle{top:-40px;left:50%;transform:translateX(-50%);background:#7dd3fc;cursor:grab}.rotateLine{position:absolute;width:3px;height:26px;background:#fff;top:-26px;left:50%;transform:translateX(-50%);pointer-events:none}
+    .moveHandle{display:none !important}
+    .item:not(.selected):not(.multi) .moveHandle{display:none !important}
+
+    #floatingToolbar{position:absolute;z-index:999;display:none;gap:6px;padding:8px;border-radius:14px;background:rgba(14,20,30,.96);border:1px solid rgba(255,255,255,.08);box-shadow:0 14px 28px rgba(0,0,0,.3);backdrop-filter:blur(8px)}
+    #floatingToolbar.visible{display:flex;align-items:center}
+    .miniAction{width:46px;height:46px;border:none;border-radius:12px;background:var(--white);color:var(--dark);font-size:18px;font-weight:700;cursor:pointer;touch-action:manipulation}.miniAction.active{outline:2px solid #111827;outline-offset:1px}
+
+    .propLabel{font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin:6px 0}
+    #hotspotEditor input,#hotspotEditor textarea,#questionEditor input,#questionEditor textarea,#questionEditor select,#propertiesPanel input,#propertiesPanel select{width:100%;border:none;border-radius:12px;padding:12px;font-size:15px;margin-bottom:10px;background:var(--white);color:#101828}
+    #hotspotEditor textarea,#questionEditor textarea{min-height:100px;resize:vertical}.editorRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}.editorBtn{height:48px;border:none;border-radius:12px;background:var(--white);color:#101828;font-size:15px;font-weight:700;cursor:pointer}
+
+    #scenePanel{
+      position:absolute;top:0;right:0;width:330px;height:100%;z-index:41;display:flex;flex-direction:column;
+      background:linear-gradient(180deg, rgba(15,23,35,.95), rgba(10,15,24,.95));
+      border-left:1px solid rgba(255,255,255,.10);box-shadow:-10px 0 28px rgba(0,0,0,.28);
+      backdrop-filter:blur(10px);transition:transform .22s ease;padding:0;border-radius:0;
+    }
+    #scenePanel.collapsed{transform:translateX(calc(100% + 20px))}
+    #scenePanelHeader{padding:18px 16px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:24px;font-weight:700;border-bottom:1px solid rgba(255,255,255,.08)}
+    #scenePanelHeaderTitle{flex:1;min-width:0}
+    #scenePanelContent{padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto;flex:1}
+    #scenePanelReopenBtn{position:absolute;top:14px;right:20px;z-index:62;display:none;width:58px;height:58px;font-size:24px;border-radius:16px}
+    #scenePanelReopenBtn.visible{display:block}
+    #layersPanel{top:72px;right:20px;width:300px;display:none;z-index:900;max-height:72vh;overflow:auto}
+    #historyPanel{top:72px;left:710px;width:260px;display:none;z-index:900}
+    .sceneThumbs{display:grid;grid-template-columns:1fr;gap:10px;max-height:300px;overflow:auto;margin-top:10px}
+    .sceneCard{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:10px;cursor:pointer}
+    .sceneCard.active{outline:2px solid var(--accent)}
+    .scenePreview{height:82px;border-radius:10px;background:#0b1420;background-size:cover;background-position:center;border:1px solid rgba(255,255,255,.08);margin-bottom:8px}
+    .sceneMeta{font-size:12px;color:rgba(255,255,255,.7)}
+    .layersList{display:grid;gap:8px}.layerRow{display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px}.layerRow.active{outline:2px solid var(--accent)}.layerName{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tinyBtn{width:42px;height:42px;border:none;border-radius:10px;background:var(--white);color:var(--dark);font-weight:700;cursor:pointer;touch-action:manipulation}
+    .toastWrap{position:absolute;right:20px;bottom:56px;z-index:1200;display:grid;gap:8px;pointer-events:none}
+    .toast{padding:10px 12px;background:rgba(14,20,30,.96);border:1px solid rgba(255,255,255,.08);border-radius:12px;box-shadow:0 12px 22px rgba(0,0,0,.28);font-size:13px}
+
+    .animate-fade{animation:fadeIn .35s ease}
+    .animate-zoom{animation:zoomIn .35s ease}
+    .animate-slide{animation:slideIn .35s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes zoomIn{from{opacity:0;transform:scale(.88)}to{opacity:1;transform:scale(1)}}
+    @keyframes slideIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+    #item1, #item2, #item3, #item4, #item5, #item7, #item8 { width:120px; }
+    #item6 { width:135px; }
+    #item9, #item10, #item11, #item12, #item13, #item14, #item15, #item16 { width:120px; }
+    #item17, #item18, #item19, #item20, #item21, #item22, #item23, #item24 { width:100px; }
+  </style>
+</head>
+<body>
+  <button id="sidebarReopenBtn">☰</button>
+  <button id="scenePanelReopenBtn">☰</button>
+  <div id="stage">
+    <div id="gridOverlay"></div>
+    <div id="safeZoneOverlay">
+      <div class="wall left"><div class="wall-label">Left Wall</div></div>
+      <div class="wall centre"><div class="wall-label">Centre Wall</div></div>
+      <div class="wall right"><div class="wall-label">Right Wall</div></div>
+    </div>
+    <div id="spotlightOverlay"><div id="spotlightHole"></div></div>
+    <video id="stageVideoBg" playsinline muted loop></video>
+    <canvas id="drawLayer"></canvas>
+
+    <div id="sidebar">
+      <div id="sidebarHeader"><div id="sidebarHeaderTitle">Resources & Widgets</div><button id="sidebarCollapseBtn">☰</button></div>
+      <div id="folderTree">
+        <button id="lessonResourcesBtn" class="folderBtn">📁 Lesson Resources</button>
+        <div id="earlyYearsWrap" style="display:none;">
+          <button id="earlyYearsBtn" class="folderBtn folderLevel2">📁 Early Years</button>
+          <div id="earlyYearsFoldersWrap" style="display:none;">
+            <button id="planetsBtn" class="folderBtn folderLevel3">📂 Planets</button>
+            <button id="infoCardsBtn" class="folderBtn folderLevel3">📂 InfoCards</button>
+            <button id="nameTagsBtn" class="folderBtn folderLevel3">📂 NameTags</button>
+          </div>
+        </div>
+        <button id="widgetsRootBtn" class="folderBtn">📁 Widgets</button>
+        <div id="widgetsWrap" style="display:none;"><button id="widgetsFolderBtn" class="folderBtn folderLevel2">📂 Widgets Library</button></div>
+      </div>
+      <div id="folderContentTitle">Planets</div>
+      <div id="folderContent">
+        <div id="folder-planets" class="folderGrid">
+          <div id="slot-item1" class="folderSlot"></div><div id="slot-item2" class="folderSlot"></div><div id="slot-item3" class="folderSlot"></div><div id="slot-item4" class="folderSlot"></div>
+          <div id="slot-item5" class="folderSlot"></div><div id="slot-item6" class="folderSlot"></div><div id="slot-item7" class="folderSlot"></div><div id="slot-item8" class="folderSlot"></div>
+        </div>
+        <div id="folder-infocards" class="folderGrid">
+          <div id="slot-item9" class="folderSlot"></div><div id="slot-item10" class="folderSlot"></div><div id="slot-item11" class="folderSlot"></div><div id="slot-item12" class="folderSlot"></div>
+          <div id="slot-item13" class="folderSlot"></div><div id="slot-item14" class="folderSlot"></div><div id="slot-item15" class="folderSlot"></div><div id="slot-item16" class="folderSlot"></div>
+        </div>
+        <div id="folder-nametags" class="folderGrid">
+          <div id="slot-item17" class="folderSlot"></div><div id="slot-item18" class="folderSlot"></div><div id="slot-item19" class="folderSlot"></div><div id="slot-item20" class="folderSlot"></div>
+          <div id="slot-item21" class="folderSlot"></div><div id="slot-item22" class="folderSlot"></div><div id="slot-item23" class="folderSlot"></div><div id="slot-item24" class="folderSlot"></div>
+        </div>
+        <div id="folder-widgets" class="folderGrid">
+          <div id="slot-widget-timer" class="folderSlot"></div><div id="slot-widget-scoreboard" class="folderSlot"></div><div id="slot-widget-hotspot-tool" class="folderSlot"></div><div id="slot-widget-text-tool" class="folderSlot"></div><div id="slot-widget-media-tool" class="folderSlot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="topControls">
+      <div class="dropdownWrap"><button id="appModeBtn" class="dropdownBtn">🛠 Build ▾</button><div id="appModeMenu" class="dropdownMenu"><button class="dropdownItem" data-appmode="build">🛠 Build</button><button class="dropdownItem" data-appmode="live">🎬 Live</button></div></div>
+      <div class="dropdownWrap"><button id="backgroundBtn" class="dropdownBtn">🖼 Background 1 ▾</button><div id="backgroundMenu" class="dropdownMenu"><button class="dropdownItem" data-bg="background.jpg">🖼 Background 1</button><button class="dropdownItem" data-bg="background-2.jpg">🖼 Background 2</button><button class="dropdownItem" data-bg="background-3.jpg">🖼 Background 3</button><button class="dropdownItem" id="uploadBgImageBtn">📁 Upload Image Background</button><button class="dropdownItem" id="uploadBgVideoBtn">🎥 Upload Video Background</button><button class="dropdownItem" id="bgImageUrlBtn">🔗 Background Image URL</button><button class="dropdownItem" id="bgVideoUrlBtn">🔗 Background Video URL</button></div></div>
+      <button id="layersPanelBtn" class="modeBtn">🗂 Layers</button>
+      <div id="builderButtons">
+        <button id="modeCreateActivity" class="modeBtn">🧩 Create</button>
+        <button id="modeAddQuestion" class="modeBtn">❓ Question</button>
+        <button id="modeAddHotspot" class="modeBtn">📍 Hotspot</button>
+        <button id="modeAddMedia" class="modeBtn">🎞 Media</button>
+        <div class="dropdownWrap"><button id="textToolBtn" class="modeBtn">🔤 Text ▾</button><div id="textToolMenu" class="dropdownMenu"><button class="dropdownItem" data-texttool="boxed">🔤 Boxed Text</button><button class="dropdownItem" data-texttool="plain">📝 Plain Text</button><button class="dropdownItem" data-texttool="header">🏷 Header Text</button></div></div>
+        <button id="modeAnnotate" class="modeBtn">✏️ Annotate</button>
+      </div>
+    </div>
+
+    <div id="projectControls"><div class="dropdownWrap"><button id="projectMenuBtn" class="dropdownBtn">🗂 Project ▾</button><div id="projectMenu" class="dropdownMenu"><button id="scenePanelBtn" class="dropdownItem">🎞 Stages</button><button id="historyPanelBtn" class="dropdownItem">↶ Undo / History</button></div></div></div>
+
+    <div id="annotateToolbar"><div class="annotateLabel">Pen colour</div><select id="penColorSelect"><option value="#1e5eff">Blue</option><option value="#e21b1b">Red</option><option value="#1aa34a">Green</option><option value="#111111">Black</option><option value="#ffd400">Yellow</option><option value="#8b5cf6">Purple</option><option value="#ff7a00">Orange</option></select><button id="annotateDrawBtn" class="panelBtn">Pen</button><button id="annotateEraseBtn" class="panelBtn">Rubber</button><select id="eraserSizeSelect"><option value="28">Rubber: Large</option><option value="40" selected>Rubber: XL</option><option value="56">Rubber: XXL</option></select><button id="clearInkInlineBtn" class="panelBtn">Clear Ink</button></div>
+    <div id="modeHint">App Mode: Build</div>
+    <div id="statusBar"><span id="saveStatus">Saved locally in this browser</span><span id="selectionStatus">No selection</span></div>
+
+    <div id="liveQuickTools">
+      <button id="liveQuickAnnotateBtn" class="liveQuickBtn" title="Annotate">✏️</button>
+      <button id="liveQuickBackgroundBtn" class="liveQuickBtn" title="Backgrounds">🖼</button>
+    </div>
+
+    <div id="liveBackgroundMenu">
+      <button class="dropdownItem" data-livebg="background.jpg">🖼 Background 1</button>
+      <button class="dropdownItem" data-livebg="background-2.jpg">🖼 Background 2</button>
+      <button class="dropdownItem" data-livebg="background-3.jpg">🖼 Background 3</button>
+      <button class="dropdownItem" id="liveUploadBgImageBtn">📁 Upload Image Background</button>
+      <button class="dropdownItem" id="liveUploadBgVideoBtn">🎥 Upload Video Background</button>
+      <button class="dropdownItem" id="liveBgImageUrlBtn">🔗 Background Image URL</button>
+      <button class="dropdownItem" id="liveBgVideoUrlBtn">🔗 Background Video URL</button>
+    </div>
+
+    <button id="teacherToggle">⚙</button>
+    <div id="teacherMenu">
+      <div class="teacherGrid">
+        <button id="presentationModeBtn" class="teacherBtn">Presentation</button>
+        <button id="freezeAllBtn" class="teacherBtn">Freeze All</button>
+        <button id="unfreezeAllBtn" class="teacherBtn">Unfreeze All</button>
+        <button id="spotlightBtn" class="teacherBtn">Spotlight</button>
+        <button id="toggleGridBtn" class="teacherBtn">Grid</button>
+        <button id="toggleSafeZoneBtn" class="teacherBtn">Safe Zones</button>
+        <button id="clearDrawingsBtn" class="teacherBtn">Clear Drawings</button>
+        <button id="clearHotspotsBtn" class="teacherBtn">Clear Hotspots</button>
+        <button id="clearWidgetsBtn" class="teacherBtn">Clear Widgets</button>
+        <button id="resetBtn" class="teacherBtn">Reset All</button>
+        <button id="exitLiveBtn" class="teacherBtn">Exit Live</button>
+      </div>
+    </div>
+
+    <div id="scenePanel" class="collapsed">
+      <div id="scenePanelHeader"><div id="scenePanelHeaderTitle">Stages</div><button id="closeScenePanel">☰</button></div>
+      <div id="scenePanelContent">
+        <input id="sceneSearchInput" type="text" placeholder="Search stages">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><button id="saveSceneBtn" class="panelBtn">Save Stage</button><button id="duplicateSceneBtn" class="panelBtn">Duplicate</button><button id="loadSceneBtn" class="panelBtn">Open Stage</button><button id="deleteSceneBtn" class="panelBtn">Delete</button><button id="exportSceneBtn" class="panelBtn">Export</button><button id="importSceneBtn" class="panelBtn">Import</button><button id="exportAllScenesBtn" class="panelBtn">Export All</button><button id="resetCurrentSceneBtn" class="panelBtn">Reset</button></div>
+        <input id="sceneFileName" type="text" placeholder="Stage name">
+        <div class="sceneThumbs" id="sceneThumbs"></div>
+      </div>
+    </div>
+
+    <input id="sceneImportInput" type="file" accept="application/json" style="display:none">
+    </div>
+
+    <div id="layersPanel">
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><strong>Layers</strong><button id="closeLayersPanel" class="tinyBtn">×</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0"><button id="groupBtn" class="panelBtn">Group</button><button id="ungroupBtn" class="panelBtn">Ungroup</button><button id="alignLeftBtn" class="panelBtn">Align Left</button><button id="alignTopBtn" class="panelBtn">Align Top</button><button id="distributeHBtn" class="panelBtn">Distribute H</button><button id="distributeVBtn" class="panelBtn">Distribute V</button></div>
+      <div class="layersList" id="layersList"></div>
+    </div>
+
+    <div id="historyPanel">
+      <div style="display:flex;gap:8px;align-items:center;justify-content:space-between"><strong>History</strong><button id="closeHistoryPanel" class="tinyBtn">×</button></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px"><button id="undoBtn" class="panelBtn">Undo</button><button id="redoBtn" class="panelBtn">Redo</button></div>
+      <div id="historyInfo" style="margin-top:10px;font-size:13px;color:rgba(255,255,255,.75)">No actions yet.</div>
+    </div>
+
+    <div id="workspaceHint"></div>
+    <div id="cloneBin">🗑 Delete<br>Drop here</div>
+
+    <div id="floatingToolbar">
+      <button id="tbSnap" class="miniAction" title="Snap">🧲</button>
+      <button id="tbLock" class="miniAction" title="Lock">🔒</button>
+      <button id="tbDuplicate" class="miniAction" title="Duplicate">⧉</button>
+      <button id="tbDelete" class="miniAction" title="Delete">🗑</button>
+      <button id="tbFront" class="miniAction" title="Bring forward">↑</button>
+      <button id="tbBack" class="miniAction" title="Send backward">↓</button>
+      <button id="tbProps" class="miniAction" title="Properties">⚙</button>
+    </div>
+
+    <div id="propertiesPanel" style="display:none;width:320px">
+      <div class="propLabel">Name</div><input id="propName" type="text" placeholder="Item name">
+      <div class="propLabel">Opacity</div><input id="propOpacity" type="range" min="10" max="100" value="100">
+      <div class="propLabel">Animation</div><select id="propAnim"><option value="none">None</option><option value="fade">Fade In</option><option value="zoom">Zoom In</option><option value="slide">Slide In</option></select>
+      <div class="propLabel">Trigger Action</div><select id="propTriggerAction"><option value="none">None</option><option value="show">Show Target</option><option value="hide">Hide Target</option><option value="toggle">Toggle Target</option><option value="scene">Load Scene</option></select>
+      <div class="propLabel">Trigger Target</div><select id="propTriggerTarget"><option value="">None</option></select>
+      <div id="propTextGroup" style="display:none"><div class="propLabel">Text Style</div><select id="propTextStyle"><option value="default">Boxed</option><option value="glass">Glass</option><option value="dark">Dark</option><option value="plain">Plain</option><option value="header">Header</option></select><div class="propLabel">Font Size</div><input id="propFontSize" type="range" min="14" max="72" value="18"></div>
+      <div id="propMediaGroup" style="display:none"><div class="propLabel">Media Frame</div><select id="propMediaStyle"><option value="card">Card</option><option value="plain">No Card</option></select><div class="propLabel">Loop</div><select id="propMediaLoop"><option value="false">Off</option><option value="true">On</option></select><div class="propLabel">Autoplay</div><select id="propMediaAutoplay"><option value="false">Off</option><option value="true">On</option></select><div class="propLabel">Mute</div><select id="propMediaMute"><option value="false">Off</option><option value="true">On</option></select></div>
+      <div id="propBgGroup" style="display:none"><div class="propLabel">Background Fit</div><select id="propBgFit"><option value="contain">Contain</option><option value="cover">Cover</option><option value="fill">Fill</option></select></div>
+      <div id="propQuestionGroup" style="display:none"><div class="propLabel">Question Behaviour</div><select id="propQuestionMode"><option value="lock-correct">Lock when correct</option><option value="single-attempt">Single attempt</option><option value="retry">Retry allowed</option></select></div>
+    </div>
+
+    <div id="hotspotEditor" style="display:none;width:320px"><input id="hotspotTitle" type="text" placeholder="Hotspot title"><textarea id="hotspotNote" placeholder="Write annotation here..."></textarea><select id="hotspotStyleSelect"><option value="default">Default Circle</option><option value="glass">Glass</option><option value="dark">Dark</option><option value="label">Label Tag</option></select><div class="editorRow"><button id="saveHotspotBtn" class="editorBtn">Save</button><button id="deleteHotspotBtn" class="editorBtn">Delete</button></div></div>
+
+    <div id="questionEditor" style="display:none;width:320px"><input id="questionTitleInput" type="text" placeholder="Question title"><textarea id="questionTextInput" placeholder="Write the question here..."></textarea><input id="questionOption1" class="questionOptionInput" type="text" placeholder="Option 1"><input id="questionOption2" class="questionOptionInput" type="text" placeholder="Option 2"><input id="questionOption3" class="questionOptionInput" type="text" placeholder="Option 3"><input id="questionOption4" class="questionOptionInput" type="text" placeholder="Option 4"><select id="questionCorrectSelect"><option value="0">Correct answer: Option 1</option><option value="1">Correct answer: Option 2</option><option value="2">Correct answer: Option 3</option><option value="3">Correct answer: Option 4</option></select><textarea id="questionAnswerInput" placeholder="Feedback for correct answer..."></textarea><div class="editorRow"><button id="saveQuestionBtn" class="editorBtn">Save</button><button id="deleteQuestionBtn" class="editorBtn">Delete</button></div></div>
+
+    <div id="widget-timer-master" class="folderItem" style="width:220px;height:76px;display:none;"><div class="widgetCard"><div class="widgetHeader">Timer</div></div></div>
+    <div id="widget-scoreboard-master" class="folderItem" style="width:220px;height:76px;display:none;"><div class="widgetCard"><div class="widgetHeader">Scoreboard</div></div></div>
+    <div id="widget-hotspot-tool-master" class="folderItem" style="width:220px;height:76px;display:none;"><div class="widgetCard"><div class="widgetHeader">Hotspot Tool</div></div></div>
+    <div id="widget-text-tool-master" class="folderItem" style="width:220px;height:76px;display:none;"><div class="widgetCard"><div class="widgetHeader">Text Box</div></div></div>
+    <div id="widget-media-tool-master" class="folderItem" style="width:220px;height:76px;display:none;"><div class="widgetCard"><div class="widgetHeader">Add Media</div></div></div>
+
+    <img class="folderItem" id="item1" src="drag-item-1.png" alt="Draggable item 1" /><img class="folderItem" id="item2" src="drag-item-2.png" alt="Draggable item 2" /><img class="folderItem" id="item3" src="drag-item-3.png" alt="Draggable item 3" /><img class="folderItem" id="item4" src="drag-item-4.png" alt="Draggable item 4" /><img class="folderItem" id="item5" src="drag-item-5.png" alt="Draggable item 5" /><img class="folderItem" id="item6" src="drag-item-6.png" alt="Draggable item 6" /><img class="folderItem" id="item7" src="drag-item-7.png" alt="Draggable item 7" /><img class="folderItem" id="item8" src="drag-item-8.png" alt="Draggable item 8" />
+    <img class="folderItem" id="item9" src="drag-item-9.png" alt="Draggable item 9" /><img class="folderItem" id="item10" src="drag-item-10.png" alt="Draggable item 10" /><img class="folderItem" id="item11" src="drag-item-11.png" alt="Draggable item 11" /><img class="folderItem" id="item12" src="drag-item-12.png" alt="Draggable item 12" /><img class="folderItem" id="item13" src="drag-item-13.png" alt="Draggable item 13" /><img class="folderItem" id="item14" src="drag-item-14.png" alt="Draggable item 14" /><img class="folderItem" id="item15" src="drag-item-15.png" alt="Draggable item 15" /><img class="folderItem" id="item16" src="drag-item-16.png" alt="Draggable item 16" />
+    <img class="folderItem" id="item17" src="drag-item-17.png" alt="Draggable item 17" /><img class="folderItem" id="item18" src="drag-item-18.png" alt="Draggable item 18" /><img class="folderItem" id="item19" src="drag-item-19.png" alt="Draggable item 19" /><img class="folderItem" id="item20" src="drag-item-20.png" alt="Draggable item 20" /><img class="folderItem" id="item21" src="drag-item-21.png" alt="Draggable item 21" /><img class="folderItem" id="item22" src="drag-item-22.png" alt="Draggable item 22" /><img class="folderItem" id="item23" src="drag-item-23.png" alt="Draggable item 23" /><img class="folderItem" id="item24" src="drag-item-24.png" alt="Draggable item 24" />
+
+    <div id="toastWrap" class="toastWrap"></div>
+  </div>
+
+  <input id="bgImageUploadInput" type="file" accept="image/*" style="display:none;"><input id="bgVideoUploadInput" type="file" accept="video/*" style="display:none;"><input id="mediaUploadInput" type="file" accept="image/*,video/*" style="display:none;">
+
+  <script>
+    const stage = document.getElementById('stage');
+    const stageVideoBg = document.getElementById('stageVideoBg');
+    const gridOverlay = document.getElementById('gridOverlay');
+    const safeZoneOverlay = document.getElementById('safeZoneOverlay');
+    const canvas = document.getElementById('drawLayer');
+    const ctx = canvas.getContext('2d');
+    const toastWrap = document.getElementById('toastWrap');
+    const saveStatus = document.getElementById('saveStatus');
+    const selectionStatus = document.getElementById('selectionStatus');
+    const sceneThumbs = document.getElementById('sceneThumbs');
+    const sceneFileName = document.getElementById('sceneFileName');
+    const sceneSearchInput = document.getElementById('sceneSearchInput');
+    const sceneImportInput = document.getElementById('sceneImportInput');
+    const layersList = document.getElementById('layersList');
+    const historyInfo = document.getElementById('historyInfo');
+
+    const sidebar = document.getElementById('sidebar');
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+    const sidebarReopenBtn = document.getElementById('sidebarReopenBtn');
+    const scenePanelReopenBtn = document.getElementById('scenePanelReopenBtn');
+    const topControls = document.getElementById('topControls');
+    const annotateToolbar = document.getElementById('annotateToolbar');
+    const penColorSelect = document.getElementById('penColorSelect');
+    const clearInkInlineBtn = document.getElementById('clearInkInlineBtn');
+    const annotateDrawBtn = document.getElementById('annotateDrawBtn');
+    const annotateEraseBtn = document.getElementById('annotateEraseBtn');
+    const eraserSizeSelect = document.getElementById('eraserSizeSelect');
+    const modeHint = document.getElementById('modeHint');
+    const statusBar = document.getElementById('statusBar');
+    const workspaceHint = document.getElementById('workspaceHint');
+    const spotlightOverlay = document.getElementById('spotlightOverlay');
+    const spotlightHole = document.getElementById('spotlightHole');
+
+    const appModeBtn = document.getElementById('appModeBtn');
+    const appModeMenu = document.getElementById('appModeMenu');
+    const backgroundBtn = document.getElementById('backgroundBtn');
+    const backgroundMenu = document.getElementById('backgroundMenu');
+    const uploadBgImageBtn = document.getElementById('uploadBgImageBtn');
+    const uploadBgVideoBtn = document.getElementById('uploadBgVideoBtn');
+    const bgImageUrlBtn = document.getElementById('bgImageUrlBtn');
+    const bgVideoUrlBtn = document.getElementById('bgVideoUrlBtn');
+
+    const projectControls = document.getElementById('projectControls');
+    const projectMenuBtn = document.getElementById('projectMenuBtn');
+    const projectMenu = document.getElementById('projectMenu');
+    const scenePanel = document.getElementById('scenePanel');
+    const scenePanelBtn = document.getElementById('scenePanelBtn');
+    const closeScenePanel = document.getElementById('closeScenePanel');
+    const saveSceneBtn = document.getElementById('saveSceneBtn');
+    const duplicateSceneBtn = document.getElementById('duplicateSceneBtn');
+    const loadSceneBtn = document.getElementById('loadSceneBtn');
+    const deleteSceneBtn = document.getElementById('deleteSceneBtn');
+    const exportSceneBtn = document.getElementById('exportSceneBtn');
+    const importSceneBtn = document.getElementById('importSceneBtn');
+    const exportAllScenesBtn = document.getElementById('exportAllScenesBtn');
+    const resetCurrentSceneBtn = document.getElementById('resetCurrentSceneBtn');
+
+    const layersPanel = document.getElementById('layersPanel');
+    const layersPanelBtn = document.getElementById('layersPanelBtn');
+    const closeLayersPanel = document.getElementById('closeLayersPanel');
+    const historyPanel = document.getElementById('historyPanel');
+    const historyPanelBtn = document.getElementById('historyPanelBtn');
+    const closeHistoryPanel = document.getElementById('closeHistoryPanel');
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const groupBtn = document.getElementById('groupBtn');
+    const ungroupBtn = document.getElementById('ungroupBtn');
+    const alignLeftBtn = document.getElementById('alignLeftBtn');
+    const alignTopBtn = document.getElementById('alignTopBtn');
+    const distributeHBtn = document.getElementById('distributeHBtn');
+    const distributeVBtn = document.getElementById('distributeVBtn');
+
+    const textToolBtn = document.getElementById('textToolBtn');
+    const textToolMenu = document.getElementById('textToolMenu');
+    const bgImageUploadInput = document.getElementById('bgImageUploadInput');
+    const bgVideoUploadInput = document.getElementById('bgVideoUploadInput');
+    const mediaUploadInput = document.getElementById('mediaUploadInput');
+
+    const liveQuickTools = document.getElementById('liveQuickTools');
+    const liveQuickAnnotateBtn = document.getElementById('liveQuickAnnotateBtn');
+    const liveQuickBackgroundBtn = document.getElementById('liveQuickBackgroundBtn');
+    const liveBackgroundMenu = document.getElementById('liveBackgroundMenu');
+    const liveUploadBgImageBtn = document.getElementById('liveUploadBgImageBtn');
+    const liveUploadBgVideoBtn = document.getElementById('liveUploadBgVideoBtn');
+    const liveBgImageUrlBtn = document.getElementById('liveBgImageUrlBtn');
+    const liveBgVideoUrlBtn = document.getElementById('liveBgVideoUrlBtn');
+    const teacherToggle = document.getElementById('teacherToggle');
+    const teacherMenu = document.getElementById('teacherMenu');
+    const presentationModeBtn = document.getElementById('presentationModeBtn');
+    const freezeAllBtn = document.getElementById('freezeAllBtn');
+    const unfreezeAllBtn = document.getElementById('unfreezeAllBtn');
+    const spotlightBtn = document.getElementById('spotlightBtn');
+    const toggleGridBtn = document.getElementById('toggleGridBtn');
+    const toggleSafeZoneBtn = document.getElementById('toggleSafeZoneBtn');
+    const clearDrawingsBtn = document.getElementById('clearDrawingsBtn');
+    const clearHotspotsBtn = document.getElementById('clearHotspotsBtn');
+    const clearWidgetsBtn = document.getElementById('clearWidgetsBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const exitLiveBtn = document.getElementById('exitLiveBtn');
+
+    const modeCreateActivity = document.getElementById('modeCreateActivity');
+    const modeAddQuestion = document.getElementById('modeAddQuestion');
+    const modeAddHotspot = document.getElementById('modeAddHotspot');
+    const modeAddMedia = document.getElementById('modeAddMedia');
+    const modeAnnotate = document.getElementById('modeAnnotate');
+
+    const tbSnap = document.getElementById('tbSnap');
+    const tbLock = document.getElementById('tbLock');
+    const tbDuplicate = document.getElementById('tbDuplicate');
+    const tbDelete = document.getElementById('tbDelete');
+    const tbFront = document.getElementById('tbFront');
+    const tbBack = document.getElementById('tbBack');
+    const tbProps = document.getElementById('tbProps');
+    const floatingToolbar = document.getElementById('floatingToolbar');
+
+    const propertiesPanel = document.getElementById('propertiesPanel');
+    const propName = document.getElementById('propName');
+    const propOpacity = document.getElementById('propOpacity');
+    const propTextGroup = document.getElementById('propTextGroup');
+    const propTextStyle = document.getElementById('propTextStyle');
+    const propFontSize = document.getElementById('propFontSize');
+    const propMediaGroup = document.getElementById('propMediaGroup');
+    const propMediaStyle = document.getElementById('propMediaStyle');
+    const propMediaLoop = document.getElementById('propMediaLoop');
+    const propMediaAutoplay = document.getElementById('propMediaAutoplay');
+    const propMediaMute = document.getElementById('propMediaMute');
+    const propBgGroup = document.getElementById('propBgGroup');
+    const propBgFit = document.getElementById('propBgFit');
+    const propAnim = document.getElementById('propAnim');
+    const propTriggerAction = document.getElementById('propTriggerAction');
+    const propTriggerTarget = document.getElementById('propTriggerTarget');
+    const propQuestionGroup = document.getElementById('propQuestionGroup');
+    const propQuestionMode = document.getElementById('propQuestionMode');
+
+    const cloneBin = document.getElementById('cloneBin');
+    const lessonResourcesBtn = document.getElementById('lessonResourcesBtn');
+    const earlyYearsBtn = document.getElementById('earlyYearsBtn');
+    const widgetsRootBtn = document.getElementById('widgetsRootBtn');
+    const earlyYearsWrap = document.getElementById('earlyYearsWrap');
+    const widgetsWrap = document.getElementById('widgetsWrap');
+    const earlyYearsFoldersWrap = document.getElementById('earlyYearsFoldersWrap');
+    const planetsBtn = document.getElementById('planetsBtn');
+    const infoCardsBtn = document.getElementById('infoCardsBtn');
+    const nameTagsBtn = document.getElementById('nameTagsBtn');
+    const widgetsFolderBtn = document.getElementById('widgetsFolderBtn');
+    const folderContentTitle = document.getElementById('folderContentTitle');
+    const folderContent = document.getElementById('folderContent');
+
+    const hotspotEditor = document.getElementById('hotspotEditor');
+    const hotspotTitle = document.getElementById('hotspotTitle');
+    const hotspotNote = document.getElementById('hotspotNote');
+    const hotspotStyleSelect = document.getElementById('hotspotStyleSelect');
+    const saveHotspotBtn = document.getElementById('saveHotspotBtn');
+    const deleteHotspotBtn = document.getElementById('deleteHotspotBtn');
+
+    const questionEditor = document.getElementById('questionEditor');
+    const questionTitleInput = document.getElementById('questionTitleInput');
+    const questionTextInput = document.getElementById('questionTextInput');
+    const questionOption1 = document.getElementById('questionOption1');
+    const questionOption2 = document.getElementById('questionOption2');
+    const questionOption3 = document.getElementById('questionOption3');
+    const questionOption4 = document.getElementById('questionOption4');
+    const questionCorrectSelect = document.getElementById('questionCorrectSelect');
+    const questionAnswerInput = document.getElementById('questionAnswerInput');
+    const saveQuestionBtn = document.getElementById('saveQuestionBtn');
+    const deleteQuestionBtn = document.getElementById('deleteQuestionBtn');
+
+    const timerMaster = document.getElementById('widget-timer-master');
+    const scoreboardMaster = document.getElementById('widget-scoreboard-master');
+    const hotspotToolMaster = document.getElementById('widget-hotspot-tool-master');
+    const textToolMaster = document.getElementById('widget-text-tool-master');
+    const mediaToolMaster = document.getElementById('widget-media-tool-master');
+    const folderItems = Array.from(document.querySelectorAll('.folderItem'));
+
+    let appMode = 'build';
+    let lastLoadedSceneSnapshot = null;
+    let currentTool = 'move';
+    let annotationColor = '#1e5eff';
+    let annotationTool = 'draw';
+    let eraserSize = 40;
+    let isDrawing = false;
+    let sidebarCollapsed = false;
+    let presentationMode = false;
+    let spotlightMode = false;
+    let snapEnabled = false;
+    let gridVisible = false;
+    let safeZonesVisible = false;
+    let lessonResourcesOpen = false;
+    let earlyYearsOpen = false;
+    let widgetsOpen = false;
+    let activeFolder = null;
+    let selectedItem = null;
+    let selectedHotspot = null;
+    let selectedQuestionItem = null;
+    let selectedSceneId = null;
+    let hotspotCounter = 0;
+    let zCounter = 100;
+    let addHotspotMode = false;
+    let addQuestionMode = false;
+    let addTextMode = false;
+    let addMediaMode = false;
+    let pendingTextVariant = 'default';
+    let selectedItems = new Set();
+    let activePointerDrag = null;
+    let lastTapAt = 0;
+    const TOUCH_DRAG_THRESHOLD = 10;
+    const DOUBLE_TAP_MS = 280;
+    let groups = {};
+    let undoStack = [];
+    let redoStack = [];
+    let autosaveTimer = null;
+    let lastAutoSavedAt = null;
+
+    const SNAP_SIZE = 20;
+    const DRAW_STORAGE_KEY = 'immersive_draw_layer_v2';
+    const SCENE_STORAGE_KEY = 'immersive_saved_scenes_v2';
+    const AUTOSAVE_SCENE_ID = '__autosave__';
+
+    const folderGroups = { planets:['item1','item2','item3','item4','item5','item6','item7','item8'], infocards:['item9','item10','item11','item12','item13','item14','item15','item16'], nametags:['item17','item18','item19','item20','item21','item22','item23','item24'] };
+    const itemFolderMap = {}; Object.entries(folderGroups).forEach(([folder,items])=>items.forEach(id=>itemFolderMap[id]=folder));
+
+    function showToast(text){ const el=document.createElement('div'); el.className='toast'; el.textContent=text; toastWrap.appendChild(el); setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .2s'; },1800); setTimeout(()=>el.remove(),2200); }
+    function snapValue(v){ return Math.round(v / SNAP_SIZE) * SNAP_SIZE; }
+    function safeUrl(url){ try { return new URL(url).toString(); } catch { return null; } }
+    function isDirectVideo(url){ return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url); }
+    function byId(id){ return document.getElementById(id); }
+    function updateSaveStatus(text){ saveStatus.textContent = text; }
+    function updateSelectionStatus(){ selectionStatus.textContent = selectedItems.size > 1 ? `${selectedItems.size} items selected` : selectedItem ? (selectedItem.dataset.name || `${selectedItem.dataset.type} selected`) : 'No selection'; }
+
+    function setStageBackgroundImage(file, label, options = {}){
+      const { suppressHistory = false, suppressAutosave = false } = options;
+      stageVideoBg.pause();
+      stageVideoBg.removeAttribute('src');
+      stageVideoBg.style.display = 'none';
+      stage.style.backgroundImage = `radial-gradient(circle at 50% 25%, rgba(125,211,252,.08), transparent 28%),radial-gradient(circle at 80% 80%, rgba(255,255,255,.05), transparent 25%),url('${file}'), linear-gradient(180deg,#08111b 0%,#05090f 100%)`;
+      if (label) backgroundBtn.textContent = `🖼 ${label} ▾`;
+      if (!suppressHistory) pushHistory('Background changed');
+      if (!suppressAutosave) scheduleAutosave();
+    }
+    function setStageBackgroundVideo(fileUrl, label, options = {}){
+      const { suppressHistory = false, suppressAutosave = false } = options;
+      stage.style.backgroundImage = `radial-gradient(circle at 50% 25%, rgba(125,211,252,.08), transparent 28%),radial-gradient(circle at 80% 80%, rgba(255,255,255,.05), transparent 25%),linear-gradient(180deg,#08111b 0%,#05090f 100%)`;
+      stageVideoBg.src = fileUrl;
+      stageVideoBg.style.display = 'block';
+      stageVideoBg.load();
+      stageVideoBg.play().catch(()=>{});
+      if (label) backgroundBtn.textContent = `🎥 ${label} ▾`;
+      if (!suppressHistory) pushHistory('Video background changed');
+      if (!suppressAutosave) scheduleAutosave();
+    }
+    function promptForBackgroundUrl(type){
+      const value = prompt(type==='image' ? 'Paste an image URL for the background.' : 'Paste a video URL for the background.', '');
+      if (!value) return; const url = safeUrl(value.trim()); if (!url) return alert('That does not look like a valid URL.');
+      type === 'image' ? setStageBackgroundImage(url,'URL Image') : setStageBackgroundVideo(url,'URL Video'); backgroundMenu.classList.remove('open');
+    }
+
+function setAppMode(mode){
+  appMode = mode;
+  appModeBtn.textContent = mode === 'build' ? '🛠 Build ▾' : '🎬 Live ▾';
+  updateAppModeUI();
+}
+    function updateSidebarState(){
+      sidebar.classList.toggle('collapsed', sidebarCollapsed); sidebarReopenBtn.classList.toggle('visible', sidebarCollapsed && !presentationMode && appMode!=='live'); topControls.classList.toggle('sidebar-collapsed', sidebarCollapsed); annotateToolbar.classList.toggle('sidebar-collapsed', sidebarCollapsed); workspaceHint.classList.toggle('sidebar-collapsed', sidebarCollapsed); modeHint.classList.toggle('sidebar-collapsed', sidebarCollapsed); statusBar.classList.toggle('sidebar-collapsed', sidebarCollapsed); if (sidebarCollapsed) hideLibraryVisuals(); else { layoutFolderItems(); layoutWidgetMasters(); }
+      repositionFloatingToolbar(); updatePropertiesPanelPosition(); resizeCanvas();
+    }
+    function updateScenePanelState(){
+      const collapsed = scenePanel.classList.contains('collapsed');
+      scenePanelReopenBtn.classList.toggle('visible', collapsed && !presentationMode && appMode!=='live');
+      projectControls.classList.toggle('scene-panel-open', !collapsed && appMode!=='live');
+      teacherToggle.classList.toggle('scene-panel-open', !collapsed && appMode!=='live');
+      teacherMenu.classList.toggle('scene-panel-open', !collapsed && appMode!=='live');
+      scenePanelReopenBtn.classList.toggle('scene-panel-open', !collapsed && appMode!=='live');
+      const rightInset = collapsed ? 170 : 354;
+      topControls.style.right = rightInset + 'px';
+      statusBar.style.right = (collapsed ? 20 : 354) + 'px';
+      workspaceHint.style.right = (collapsed ? 20 : 354) + 'px';
+      if(appMode === 'live'){
+        topControls.style.right = '170px';
+        statusBar.style.right = '20px';
+        workspaceHint.style.right = '20px';
+        projectControls.classList.remove('scene-panel-open');
+        teacherToggle.classList.remove('scene-panel-open');
+        teacherMenu.classList.remove('scene-panel-open');
+        scenePanelReopenBtn.classList.remove('scene-panel-open');
+      }
+    }
+    function hideLibraryVisuals(){ folderItems.forEach(item=>item.style.display='none'); [timerMaster,scoreboardMaster,hotspotToolMaster,textToolMaster,mediaToolMaster].forEach(el=>el.style.display='none'); }
+    function updatePresentationMode(){ document.body.classList.toggle('presentation-mode', presentationMode); presentationModeBtn.textContent = presentationMode ? 'Exit Presentation' : 'Presentation'; resizeCanvas(); }
+    function closeLibraryPanelsForLive(){
+      lessonResourcesOpen = false;
+      earlyYearsOpen = false;
+      widgetsOpen = false;
+      earlyYearsWrap.style.display = 'none';
+      earlyYearsFoldersWrap.style.display = 'none';
+      widgetsWrap.style.display = 'none';
+      applyFolderContentVisibility();
+      hideLibraryVisuals();
+    }
+    function updateSpotlight(){ if (!spotlightMode || !selectedItem) { spotlightOverlay.style.display='none'; spotlightBtn.classList.remove('active'); return; } const stageRect=stage.getBoundingClientRect(), rect=selectedItem.getBoundingClientRect(), padding=24; spotlightOverlay.style.display='block'; spotlightBtn.classList.add('active'); spotlightHole.style.left=(rect.left-stageRect.left-padding)+'px'; spotlightHole.style.top=(rect.top-stageRect.top-padding)+'px'; spotlightHole.style.width=(rect.width+padding*2)+'px'; spotlightHole.style.height=(rect.height+padding*2)+'px'; }
+    function updateAppModeUI(){
+      const isBuild = appMode === 'build';
+      const isLive = appMode === 'live';
+
+      document.body.classList.toggle('run-mode', isLive);
+
+      if (isBuild) {
+        teacherToggle.textContent = '⚙';
+        teacherToggle.title = 'Teacher tools';
+        teacherToggle.style.display = '';
+        liveQuickTools.style.display = 'none';
+        liveBackgroundMenu.classList.remove('open');
+        liveQuickBackgroundBtn.classList.remove('active');
+        liveQuickAnnotateBtn.classList.remove('active');
+      } else {
+        teacherToggle.textContent = '☰';
+        teacherToggle.title = 'Live controls';
+        teacherToggle.style.display = '';
+        liveQuickTools.style.display = 'flex';
+        sidebarCollapsed = true;
+        teacherMenu.classList.remove('open');
+        scenePanel.classList.add('collapsed'); updateScenePanelState();
+        layersPanel.classList.remove('open');
+        historyPanel.classList.remove('open');
+        propertiesPanel.style.display = 'none';
+        hideHotspotEditor();
+        hideQuestionEditor();
+      }
+
+      setHint(isBuild ? 'App Mode: Build' : 'App Mode: Live');
+
+      document.querySelectorAll('.item[data-type="question"]').forEach(renderQuestionCardFromItem);
+      document.querySelectorAll('.item[data-type="media"]').forEach(item => {
+        applyMediaModeState(item);
+        applyMediaFrameStyle(item);
+      });
+      document.querySelectorAll('.item[data-type="text"]').forEach(item => {
+        applyTextModeState(item);
+        applyTextStyle(item);
+      });
+
+      if (isLive) {
+        closeLibraryPanelsForLive();
+        resetPendingModes();
+        currentTool = 'move';
+        canvas.style.pointerEvents = 'none';
+        annotateToolbar.classList.remove('visible');
+        backgroundMenu.classList.remove('open');
+        liveBackgroundMenu.classList.remove('open');
+        scenePanel.classList.add('collapsed');
+        activateModeButton(null);
+      }
+
+      liveQuickAnnotateBtn.classList.toggle('active', isLive && currentTool === 'annotate');
+      liveQuickBackgroundBtn.classList.toggle('active', isLive && liveBackgroundMenu.classList.contains('open'));
+
+      document.addEventListener('gesturestart', e=>e.preventDefault());
+    document.addEventListener('gesturechange', e=>e.preventDefault());
+    document.addEventListener('gestureend', e=>e.preventDefault());
+
+    updateSidebarState();
+      updateScenePanelState();
+      positionAnnotateToolbar();
+      updateSelectionVisuals();
+      repositionFloatingToolbar();
+      updatePropertiesPanelPosition();
+      updateSpotlight();
+    }
+    function activateModeButton(btn){ [modeCreateActivity,modeAddQuestion,modeAddHotspot,modeAddMedia,modeAnnotate,textToolBtn].forEach(b=>b.classList.remove('active')); if (btn) btn.classList.add('active'); }
+    function resetPendingModes(){ addHotspotMode=false; addQuestionMode=false; addTextMode=false; addMediaMode=false; }
+    function updateAnnotateToolUI(){
+      annotateDrawBtn.classList.toggle('active', annotationTool==='draw');
+      annotateEraseBtn.classList.toggle('active', annotationTool==='erase');
+      eraserSizeSelect.style.display = annotationTool==='erase' ? '' : 'none';
+    }
+    function enterMoveMode(){ currentTool='move'; canvas.style.pointerEvents='none'; activateModeButton(null); resetPendingModes(); annotateToolbar.classList.remove('visible'); textToolMenu.classList.remove('open'); liveQuickAnnotateBtn.classList.remove('active'); setHint(appMode === 'build' ? 'App Mode: Build' : 'App Mode: Live'); }
+    function enterAnnotateMode(){
+  currentTool='annotate';
+  canvas.style.pointerEvents='auto';
+  resetPendingModes();
+  activateModeButton(modeAnnotate);
+  annotateToolbar.classList.add('visible');
+  annotationColor=penColorSelect.value;
+  updateAnnotateToolUI();
+  positionAnnotateToolbar();
+  liveQuickAnnotateBtn.classList.toggle('active', appMode === 'live');
+  setHint(appMode === 'build' ? 'Mode: Annotate' : 'Live Mode: Annotate');
+}
+    function enterQuestionMode(){ if (appMode!=='build') return; currentTool='question'; canvas.style.pointerEvents='none'; resetPendingModes(); addQuestionMode=true; activateModeButton(modeAddQuestion); annotateToolbar.classList.remove('visible'); setHint('Mode: Add Question — tap stage'); }
+    function enterHotspotMode(){ if (appMode!=='build') return; currentTool='hotspot'; canvas.style.pointerEvents='none'; resetPendingModes(); addHotspotMode=true; activateModeButton(modeAddHotspot); annotateToolbar.classList.remove('visible'); setHint('Mode: Add Hotspot — tap stage'); }
+    function enterTextMode(variant){ if (appMode!=='build') return; currentTool='text'; pendingTextVariant=variant||'default'; canvas.style.pointerEvents='none'; resetPendingModes(); addTextMode=true; activateModeButton(textToolBtn); annotateToolbar.classList.remove('visible'); setHint(`Mode: Add ${variant==='header'?'Header':variant==='plain'?'Plain Text':'Text'} — tap stage`); }
+    function enterMediaMode(){ if (appMode!=='build') return; currentTool='media'; canvas.style.pointerEvents='none'; resetPendingModes(); addMediaMode=true; activateModeButton(modeAddMedia); annotateToolbar.classList.remove('visible'); setHint('Mode: Add Media — tap stage'); }
+
+    function positionAnnotateToolbar(){
+      const anchor = appMode === 'live' ? liveQuickAnnotateBtn : modeAnnotate;
+      if(!anchor) return;
+      const stageRect = stage.getBoundingClientRect();
+      const anchorRect = anchor.getBoundingClientRect();
+      let left = anchorRect.left - stageRect.left;
+      let top = anchorRect.bottom - stageRect.top + 10;
+      const toolbarWidth = annotateToolbar.offsetWidth || 420;
+      if(left + toolbarWidth > stageRect.width - 20) left = stageRect.width - toolbarWidth - 20;
+      if(left < 20) left = 20;
+      annotateToolbar.style.left = left + 'px';
+      annotateToolbar.style.top = top + 'px';
+    }
+    function resizeCanvas(){
+      const rect = stage.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+      canvas.width = rect.width * dpr; canvas.height = rect.height * dpr; canvas.style.width = rect.width + 'px'; canvas.style.height = rect.height + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0); ctx.lineCap='round'; ctx.lineJoin='round'; restoreDrawing();
+      if (!sidebarCollapsed) { layoutFolderItems(); layoutWidgetMasters(); }
+      positionAnnotateToolbar();
+      repositionFloatingToolbar(); updatePropertiesPanelPosition(); updateHotspotEditorPosition(); updateQuestionEditorPosition(); updateSpotlight(); refreshLayersPanel();
+    }
+    function saveDrawing(){ try { localStorage.setItem(DRAW_STORAGE_KEY, canvas.toDataURL('image/png')); } catch(e){} scheduleAutosave(); }
+    function restoreDrawing(){ const saved=localStorage.getItem(DRAW_STORAGE_KEY); const rect=stage.getBoundingClientRect(); ctx.clearRect(0,0,rect.width,rect.height); if (!saved) return; const img = new Image(); img.onload=()=>ctx.drawImage(img,0,0,rect.width,rect.height); img.src=saved; }
+    function clearDrawing(options = {}){
+      const { suppressHistory = false, suppressAutosave = false, keepStorage = false } = options;
+      const rect=stage.getBoundingClientRect();
+      ctx.clearRect(0,0,rect.width,rect.height);
+      if (!keepStorage) localStorage.removeItem(DRAW_STORAGE_KEY);
+      if (!suppressHistory) pushHistory('Drawings cleared');
+      if (!suppressAutosave) scheduleAutosave();
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      if (currentTool !== 'annotate') return;
+      isDrawing = true;
+      const r = canvas.getBoundingClientRect();
+      const x = e.clientX-r.left, y = e.clientY-r.top;
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      if(annotationTool === 'erase'){
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.arc(x,y,eraserSize/2,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+    });
+    canvas.addEventListener('pointermove', e => {
+      if (!isDrawing || currentTool !== 'annotate') return;
+      const r = canvas.getBoundingClientRect();
+      const x = e.clientX-r.left, y = e.clientY-r.top;
+      if(annotationTool === 'erase'){
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = eraserSize;
+        ctx.strokeStyle = 'rgba(0,0,0,1)';
+        ctx.lineTo(x,y);
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        ctx.lineTo(x,y);
+        ctx.strokeStyle=annotationColor;
+        ctx.lineWidth=8;
+        ctx.stroke();
+      }
+    });
+    ['pointerup','pointercancel','pointerleave'].forEach(evt=>canvas.addEventListener(evt,()=>{ if (!isDrawing) return; isDrawing=false; saveDrawing(); }));
+
+    function getItemWidth(item){ return parseFloat(item.dataset.width || item.style.width || item.getBoundingClientRect().width); }
+    function getItemHeight(item){ const ratio=parseFloat(item.dataset.ratio || '1'); return getItemWidth(item)/ratio; }
+    function makeSelectionChrome(){ return `<div class="selectionBox"></div><div class="rotateLine"></div><div class="rotateHandle"></div><div class="resizeHandle nw"></div><div class="resizeHandle ne"></div><div class="resizeHandle sw"></div><div class="resizeHandle se"></div>`; }
+    function applyItemBox(item){ const w=getItemWidth(item), h=getItemHeight(item); item.style.width=w+'px'; item.style.height=h+'px'; item.style.transform=`rotate(${parseFloat(item.dataset.rotation||'0')}deg)`; const shell=item.querySelector('.dragShell'); if (shell) { shell.style.width=w+'px'; shell.style.height=h+'px'; } }
+    function setItemOpacity(item, value){ item.dataset.opacity=String(value); const shell=item.querySelector('.dragShell'); if (shell) shell.style.opacity=(value/100).toString(); }
+
+    function defaultNameForType(type){ return ({image:'Image',text:'Text',media:'Media',timer:'Timer',scoreboard:'Scoreboard',question:'Question'})[type] || 'Item'; }
+    function createBaseItem(type,x,y,width,ratio){
+      const item=document.createElement('div'); item.className='item'; item.dataset.id='item-'+Date.now()+'-'+Math.floor(Math.random()*10000); item.dataset.type=type; item.dataset.width=String(width); item.dataset.ratio=String(ratio); item.dataset.rotation='0'; item.dataset.locked='false'; item.dataset.opacity='100'; item.dataset.name = defaultNameForType(type); item.dataset.anim='none'; item.dataset.triggerAction='none'; item.dataset.triggerTarget=''; item.dataset.group='';
+      item.style.left=x+'px'; item.style.top=y+'px'; item.style.zIndex=String(++zCounter); item.innerHTML=`<div class="dragShell">${makeSelectionChrome()}</div>`; applyItemBox(item); setItemOpacity(item,100); stage.appendChild(item); wireItemInteractions(item); refreshTriggerTargetOptions(); refreshLayersPanel(); scheduleAutosave(); return item;
+    }
+    function createImageItemFromOriginal(original,x,y){ const width=original.getBoundingClientRect().width; const naturalRatio=(original.naturalWidth||width)/(original.naturalHeight||width); const item=createBaseItem('image',x,y,width,naturalRatio); const shell=item.querySelector('.dragShell'); const img=document.createElement('img'); img.className='stageImage'; img.src=original.src; img.alt=original.alt||''; shell.prepend(img); selectItem(item); playItemEntrance(item); return item; }
+    function createTextItem(x,y,variant='default'){ const item=createBaseItem('text',x,y,360,360/240); item.dataset.textStyleVariant=variant; item.dataset.fontSize=variant==='header'?'40':'18'; const shell=item.querySelector('.dragShell'); shell.innerHTML=`<div class="widgetCard text-card"><div class="widgetHeader text-header">${variant==='header'?'Header Text':variant==='plain'?'Plain Text':'Text Box'}</div><div class="widgetBody text-body" style="padding:12px;"><textarea class="textBoxArea" placeholder="${variant==='header'?'Add heading...':'Type here...'}"></textarea></div></div>${makeSelectionChrome()}`; applyTextModeState(item); applyTextStyle(item); wireItemInteractions(item); selectItem(item); playItemEntrance(item); return item; }
+    function createMediaItem(x,y){ const item=createBaseItem('media',x,y,460,460/430); item.dataset.mediaFrameStyle='card';
+      item.dataset.mediaLoop='false';
+      item.dataset.mediaAutoplay='false';
+      item.dataset.mediaMute='false'; const shell=item.querySelector('.dragShell'); shell.innerHTML=`<div class="widgetCard media-card"><div class="widgetHeader media-header">Add Media</div><div class="widgetBody media-body" style="padding:12px;align-items:stretch;flex-direction:column;"><input class="mediaUrlInput" type="text" placeholder="Paste YouTube, Vimeo, Drive, SharePoint, direct video, or embeddable URL"><input class="mediaPosterInput" type="text" placeholder="Optional poster / thumbnail image URL"><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="widgetActionBtn media-load-btn">Load URL</button><button class="widgetActionBtn media-upload-btn">Upload File</button></div><div class="mediaFrameWrap"><div class="mediaFallback"><div>This URL could not be embedded here.</div><a class="mediaOpenLink" href="#" target="_blank">Open Link</a></div><iframe class="mediaFrame" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><video class="mediaVideo" controls playsinline><source class="mediaVideoSource" src=""></video><img class="mediaImage" alt="Uploaded media image"></div></div></div>${makeSelectionChrome()}`; wireMediaItem(item); applyMediaModeState(item); applyMediaFrameStyle(item); wireItemInteractions(item); selectItem(item); playItemEntrance(item); return item; }
+    function createTimerItem(x,y){ const item=createBaseItem('timer',x,y,250,250/170); const shell=item.querySelector('.dragShell'); shell.innerHTML=`<div class="widgetCard"><div class="widgetHeader">Timer</div><div class="widgetBody"><div class="widgetValue timer-display">00:00</div><button class="widgetMiniBtn timer-start">▶</button><button class="widgetMiniBtn timer-pause">⏸</button><button class="widgetMiniBtn timer-reset">↺</button></div></div>${makeSelectionChrome()}`; item.dataset.timerSeconds='0'; wireTimerItem(item); selectItem(item); playItemEntrance(item); return item; }
+    function createScoreboardItem(x,y){ const item=createBaseItem('scoreboard',x,y,320,320/205); const shell=item.querySelector('.dragShell'); shell.innerHTML=`<div class="widgetCard"><div class="widgetHeader">Scoreboard</div><div class="widgetBody" style="justify-content:space-between;"><div class="widgetTeamCol"><div class="widgetTeamTitle">Team A</div><div class="widgetValue score-a">0</div><div style="display:flex;gap:8px;"><button class="widgetMiniBtn score-a-minus">−</button><button class="widgetMiniBtn score-a-plus">+</button></div></div><div class="widgetTeamCol"><div class="widgetTeamTitle">Team B</div><div class="widgetValue score-b">0</div><div style="display:flex;gap:8px;"><button class="widgetMiniBtn score-b-minus">−</button><button class="widgetMiniBtn score-b-plus">+</button></div></div></div></div>${makeSelectionChrome()}`; wireScoreboardItem(item); selectItem(item); playItemEntrance(item); return item; }
+    function createQuestionItem(x,y){ const item=createBaseItem('question',x,y,460,460/360); item.dataset.qtitle='Question'; item.dataset.qprompt='Write your question here...'; item.dataset.qoptions=JSON.stringify(['Option A','Option B','Option C','Option D']); item.dataset.qcorrect='0'; item.dataset.qfeedback='Well done!'; item.dataset.qmode='lock-correct'; item.dataset.qcompleted='false'; const shell=item.querySelector('.dragShell'); shell.innerHTML=`<div class="questionCardInner"><div class="questionHeader"><div class="questionTitle">Question</div></div><div class="questionBody" style="align-items:stretch;flex-direction:column;"><div class="questionPrompt">Write your question here...</div><div class="questionOptions"></div><div class="questionFeedback"></div></div></div>${makeSelectionChrome()}`; wireItemInteractions(item); renderQuestionCardFromItem(item); selectItem(item); openQuestionEditorForItem(item); playItemEntrance(item); return item; }
+
+    function playItemEntrance(item){ const anim=item.dataset.anim||'none'; item.classList.remove('animate-fade','animate-zoom','animate-slide'); if(anim==='fade') item.classList.add('animate-fade'); if(anim==='zoom') item.classList.add('animate-zoom'); if(anim==='slide') item.classList.add('animate-slide'); if(anim!=='none') setTimeout(()=>item.classList.remove('animate-fade','animate-zoom','animate-slide'),500); }
+
+    function renderQuestionCardFromItem(item){
+      const title=item.dataset.qtitle||'Question'; const prompt=item.dataset.qprompt||'Write your question here...'; const options=JSON.parse(item.dataset.qoptions||'["Option A","Option B","Option C","Option D"]'); const correctIndex=parseInt(item.dataset.qcorrect||'0',10); const qmode=item.dataset.qmode||'lock-correct';
+      item.querySelector('.questionTitle').textContent=title; item.querySelector('.questionPrompt').textContent=prompt;
+      const wrap=item.querySelector('.questionOptions'); const feedback=item.querySelector('.questionFeedback'); wrap.innerHTML=''; feedback.style.display='none'; feedback.textContent='';
+      options.forEach((opt,i)=>{ const btn=document.createElement('button'); btn.className='questionOptionBtn'; btn.textContent=opt; btn.addEventListener('pointerdown', e => {
+        if (appMode !== 'live') return; e.stopPropagation(); e.preventDefault(); if (item.dataset.qcompleted === 'true') return;
+        const all = wrap.querySelectorAll('.questionOptionBtn');
+        if (qmode === 'single-attempt') all.forEach(b=>b.disabled=true);
+        if (i === correctIndex) {
+          btn.classList.add('correct'); feedback.textContent = item.dataset.qfeedback || 'Correct!'; feedback.style.display='block';
+          if (qmode === 'lock-correct' || qmode === 'single-attempt') { item.dataset.qcompleted='true'; all.forEach(b=>b.disabled=true); }
+          runTrigger(item);
+        } else {
+          btn.classList.add('incorrect'); feedback.textContent = qmode === 'retry' ? 'Not quite. Try again.' : 'Not quite.'; feedback.style.display='block';
+          if (qmode === 'single-attempt') { if (all[correctIndex]) all[correctIndex].classList.add('correct'); }
+          if (qmode === 'lock-correct') btn.disabled = true;
+        }
+      }); wrap.appendChild(btn); });
+    }
+
+    function wireTimerItem(item){
+      item.dataset.timerRunning = item.dataset.timerRunning || 'false';
+      item._timerInterval = null;
+      const display = item.querySelector('.timer-display');
+      const stopTimer = () => {
+        if(item._timerInterval){
+          clearInterval(item._timerInterval);
+          item._timerInterval = null;
+        }
+        item.dataset.timerRunning = 'false';
+      };
+      const startTimer = () => {
+        if(item._timerInterval) return;
+        item.dataset.timerRunning = 'true';
+        item._timerInterval = setInterval(()=>{
+          const secs=parseInt(item.dataset.timerSeconds||'0',10)+1;
+          item.dataset.timerSeconds=String(secs);
+          display.textContent=formatTime(secs);
+        },1000);
+      };
+      item.querySelector('.timer-start').addEventListener('pointerdown', e=>{
+        if(appMode!=='live') return;
+        e.stopPropagation();
+        e.preventDefault();
+        startTimer();
+      });
+      item.querySelector('.timer-pause').addEventListener('pointerdown', e=>{
+        if(appMode!=='live') return;
+        e.stopPropagation();
+        e.preventDefault();
+        stopTimer();
+      });
+      item.querySelector('.timer-reset').addEventListener('pointerdown', e=>{
+        if(appMode!=='live') return;
+        e.stopPropagation();
+        e.preventDefault();
+        stopTimer();
+        item.dataset.timerSeconds='0';
+        display.textContent='00:00';
+      });
+    }
+    function wireScoreboardItem(item){
+      const scoreA=item.querySelector('.score-a'), scoreB=item.querySelector('.score-b');
+      item.querySelector('.score-a-plus').addEventListener('pointerdown', e=>{ if(appMode!=='live') return; e.stopPropagation(); e.preventDefault(); scoreA.textContent=String(parseInt(scoreA.textContent,10)+1); });
+      item.querySelector('.score-a-minus').addEventListener('pointerdown', e=>{ if(appMode!=='live') return; e.stopPropagation(); e.preventDefault(); scoreA.textContent=String(Math.max(0,parseInt(scoreA.textContent,10)-1)); });
+      item.querySelector('.score-b-plus').addEventListener('pointerdown', e=>{ if(appMode!=='live') return; e.stopPropagation(); e.preventDefault(); scoreB.textContent=String(parseInt(scoreB.textContent,10)+1); });
+      item.querySelector('.score-b-minus').addEventListener('pointerdown', e=>{ if(appMode!=='live') return; e.stopPropagation(); e.preventDefault(); scoreB.textContent=String(Math.max(0,parseInt(scoreB.textContent,10)-1)); });
+    }
+    function formatTime(totalSeconds){ return `${String(Math.floor(totalSeconds/60)).padStart(2,'0')}:${String(totalSeconds%60).padStart(2,'0')}`; }
+
+    function getYouTubeEmbedUrl(url){ try{ const parsed=new URL(url); if(parsed.hostname.includes('youtu.be')){ const id=parsed.pathname.replace('/','').trim(); if(id) return `https://www.youtube.com/embed/${id}`; } if(parsed.hostname.includes('youtube.com')){ if(parsed.pathname==='/watch'){ const id=parsed.searchParams.get('v'); if(id) return `https://www.youtube.com/embed/${id}`; } if(parsed.pathname.startsWith('/embed/')) return url; } } catch{} return null; }
+    function getVimeoEmbedUrl(url){ try{ const parsed=new URL(url); if(parsed.hostname.includes('vimeo.com')&&!parsed.hostname.includes('player.vimeo.com')){ const parts=parsed.pathname.split('/').filter(Boolean); const id=parts[parts.length-1]; if(id&&/^\d+$/.test(id)) return `https://player.vimeo.com/video/${id}`; } if(parsed.hostname.includes('player.vimeo.com')) return url; } catch{} return null; }
+    function getGoogleDriveEmbedUrl(url){ try{ const parsed=new URL(url); if(!parsed.hostname.includes('drive.google.com')) return null; const m=parsed.pathname.match(/\/file\/d\/([^/]+)/); if(m&&m[1]) return `https://drive.google.com/file/d/${m[1]}/preview`; const id=parsed.searchParams.get('id'); if(id) return `https://drive.google.com/file/d/${id}/preview`; } catch{} return null; }
+    function getSharePointOrOneDriveEmbedUrl(url){ try{ const parsed=new URL(url); const host=parsed.hostname.toLowerCase(); if(!(host.includes('sharepoint.com')||host.includes('onedrive.live.com')||host.includes('1drv.ms'))) return null; if(host.includes('onedrive.live.com')){ const resid=parsed.searchParams.get('resid'); const authkey=parsed.searchParams.get('authkey'); if(resid){ let embed=`https://onedrive.live.com/embed?resid=${encodeURIComponent(resid)}`; if(authkey) embed += `&authkey=${encodeURIComponent(authkey)}`; return embed; } } if(host.includes('sharepoint.com')) { parsed.searchParams.set('embed','1'); return parsed.toString(); } return url; } catch{} return null; }
+    function wireMediaItem(item){ const loadBtn=item.querySelector('.media-load-btn'); const uploadBtn=item.querySelector('.media-upload-btn'); const input=item.querySelector('.mediaUrlInput'); const posterInput=item.querySelector('.mediaPosterInput'); const frame=item.querySelector('.mediaFrame'); const video=item.querySelector('.mediaVideo'); const source=item.querySelector('.mediaVideoSource'); const fallback=item.querySelector('.mediaFallback'); const openLink=item.querySelector('.mediaOpenLink'); const mediaImage=item.querySelector('.mediaImage'); function reset(){ frame.style.display='none'; frame.src=''; video.style.display='none'; video.pause(); source.src=''; fallback.style.display='none'; mediaImage.style.display='none'; mediaImage.src=''; } function showFallback(url,message){ reset(); fallback.style.display='flex'; fallback.querySelector('div').textContent=message; openLink.href=url||'#'; } loadBtn.addEventListener('pointerdown', e=>{ if(appMode!=='build') return; e.stopPropagation(); e.preventDefault(); const raw=input.value.trim(); const poster=posterInput.value.trim(); if(!raw) return; const yt=getYouTubeEmbedUrl(raw), vim=getVimeoEmbedUrl(raw), gdrv=getGoogleDriveEmbedUrl(raw), sp=getSharePointOrOneDriveEmbedUrl(raw); reset(); if(yt||vim||gdrv||sp){ frame.style.display='block'; frame.src=yt||vim||gdrv||sp; return; } if(isDirectVideo(raw)){ source.src=raw; if(poster) video.setAttribute('poster', poster); video.style.display='block'; video.load(); return; } const valid=safeUrl(raw); if(valid){ frame.style.display='block'; frame.src=valid; return; } showFallback(raw,'That does not look like a valid URL.'); }); uploadBtn.addEventListener('pointerdown', e=>{ if(appMode!=='build') return; e.stopPropagation(); e.preventDefault(); mediaUploadInput.onchange=ev=>{ const file=ev.target.files&&ev.target.files[0]; if(!file) return; const url=URL.createObjectURL(file); reset(); if(file.type.startsWith('image/')){ mediaImage.src=url; mediaImage.style.display='block'; } else if(file.type.startsWith('video/')){ source.src=url; video.style.display='block'; video.load(); } mediaUploadInput.value=''; scheduleAutosave(); }; mediaUploadInput.click(); }); }
+    function applyMediaModeState(item){ const editable=appMode==='build'; item.querySelectorAll('.mediaUrlInput,.mediaPosterInput,.media-load-btn,.media-upload-btn').forEach(el=>el.style.display=editable?'':'none'); }
+    function applyMediaFrameStyle(item){
+      const style=item.dataset.mediaFrameStyle||'card';
+      const card=item.querySelector('.media-card');
+      if(card) card.classList.toggle('no-card', style==='plain');
+      const video=item.querySelector('.mediaVideo');
+      if(video){
+        video.loop = item.dataset.mediaLoop === 'true';
+        video.muted = item.dataset.mediaMute === 'true';
+        video.autoplay = item.dataset.mediaAutoplay === 'true';
+        if(video.autoplay){ video.play().catch(()=>{}); }
+      }
+      const frame=item.querySelector('.mediaFrame');
+      if(frame && item.dataset.mediaAutoplay === 'true'){
+        const src = frame.src;
+        if(src && !src.includes('autoplay=1')){
+          try{
+            const url = new URL(src);
+            url.searchParams.set('autoplay','1');
+            if(item.dataset.mediaMute === 'true') url.searchParams.set('mute','1');
+            frame.src = url.toString();
+          }catch{}
+        }
+      }
+    }
+    function applyTextModeState(item){ const ta=item.querySelector('.textBoxArea'); if(!ta) return; ta.readOnly=appMode!=='build'; ta.style.pointerEvents=appMode==='build'?'auto':'none'; }
+    function applyTextStyle(item){ const ta=item.querySelector('.textBoxArea'); const card=item.querySelector('.text-card'); if(!ta||!card) return; const style=item.dataset.textStyleVariant||'default'; const fontSize=parseInt(item.dataset.fontSize||(style==='header'?'40':'18'),10); card.classList.remove('no-card'); ta.style.background=''; ta.style.border=''; ta.style.color=''; ta.style.backdropFilter=''; ta.style.boxShadow=''; ta.style.fontSize=fontSize+'px'; ta.style.fontWeight='400'; ta.style.textAlign='left'; ta.style.padding='12px'; if(style==='default'){ ta.style.background='rgba(255,255,255,.96)'; ta.style.color='#111827'; } else if(style==='glass'){ ta.style.background='rgba(255,255,255,.18)'; ta.style.color='#ffffff'; ta.style.border='1px solid rgba(255,255,255,.35)'; ta.style.backdropFilter='blur(8px)'; } else if(style==='dark'){ ta.style.background='rgba(17,24,39,.88)'; ta.style.color='#ffffff'; ta.style.border='1px solid rgba(255,255,255,.12)'; } else if(style==='plain'){ card.classList.add('no-card'); ta.style.background='transparent'; ta.style.color='#ffffff'; ta.style.border='none'; } else if(style==='header'){ card.classList.add('no-card'); ta.style.background='transparent'; ta.style.color='#ffffff'; ta.style.border='none'; ta.style.fontWeight='800'; ta.style.textAlign='center'; ta.style.padding='8px'; } }
+    function applyHotspotStyle(hotspot){ const style=hotspot.dataset.styleVariant||'default'; hotspot.style.border=''; hotspot.style.background=''; hotspot.style.color=''; hotspot.style.borderRadius=''; hotspot.style.padding=''; hotspot.style.width=''; hotspot.style.height=''; hotspot.style.minWidth=''; hotspot.style.fontSize=''; hotspot.style.backdropFilter=''; if(style==='default'){ hotspot.style.width='34px'; hotspot.style.height='34px'; hotspot.style.borderRadius='50%'; hotspot.style.background='rgba(255,208,0,.95)'; hotspot.style.color='#111'; } else if(style==='glass'){ hotspot.style.width='38px'; hotspot.style.height='38px'; hotspot.style.borderRadius='50%'; hotspot.style.background='rgba(255,255,255,.25)'; hotspot.style.backdropFilter='blur(8px)'; hotspot.style.border='1px solid rgba(255,255,255,.5)'; hotspot.style.color='#fff'; } else if(style==='dark'){ hotspot.style.width='38px'; hotspot.style.height='38px'; hotspot.style.borderRadius='50%'; hotspot.style.background='rgba(17,24,39,.92)'; hotspot.style.color='#fff'; } else if(style==='label'){ hotspot.style.width='auto'; hotspot.style.minWidth='80px'; hotspot.style.height='36px'; hotspot.style.padding='0 12px'; hotspot.style.borderRadius='12px'; hotspot.style.background='rgba(255,255,255,.92)'; hotspot.style.color='#111'; hotspot.style.fontSize='14px'; } }
+
+    function clearSelectionSet(){ selectedItems.forEach(it=>it.classList.remove('multi')); selectedItems.clear(); }
+    function addToSelection(item){ if (!item) return; selectedItems.add(item); item.classList.add('multi'); selectedItem=item; updateSelectionVisuals(); updateSelectionStatus(); }
+    function selectItem(item, additive=false){ if (!additive) { if (selectedItem && selectedItem !== item) selectedItem.classList.remove('selected'); clearSelectionSet(); } selectedItem=item; if (item) { item.classList.add('selected'); item.style.zIndex=String(++zCounter); addToSelection(item); } updateSelectionVisuals(); repositionFloatingToolbar(); updatePropertiesPanelFromSelection(); updateSpotlight(); refreshLayersPanel(); }
+    function deselectItem(){ if (selectedItem) selectedItem.classList.remove('selected'); clearSelectionSet(); selectedItem=null; floatingToolbar.classList.remove('visible'); propertiesPanel.style.display='none'; updateSpotlight(); updateSelectionStatus(); refreshLayersPanel(); }
+    function updateSelectionVisuals(){ document.querySelectorAll('.item').forEach(item=>item.classList.toggle('locked', item.dataset.locked === 'true')); if(!selectedItem||presentationMode){ floatingToolbar.classList.remove('visible'); return; } tbLock.textContent=selectedItem.dataset.locked==='true'?'🔓':'🔒'; tbLock.classList.toggle('active',selectedItem.dataset.locked==='true'); tbSnap.classList.toggle('active',snapEnabled); }
+    function repositionFloatingToolbar(){ if(!selectedItem||presentationMode){ floatingToolbar.classList.remove('visible'); return; } const rect=selectedItem.getBoundingClientRect(), stageRect=stage.getBoundingClientRect(); let left=rect.left-stageRect.left; let top=rect.top-stageRect.top-52; if(top<10) top=rect.bottom-stageRect.top+10; left=Math.max(sidebarCollapsed?84:340, Math.min(left, stageRect.width-420)); floatingToolbar.style.left=left+'px'; floatingToolbar.style.top=top+'px'; floatingToolbar.classList.add('visible'); }
+    function updatePropertiesPanelPosition(){ if(!selectedItem||propertiesPanel.style.display==='none') return; const rect=selectedItem.getBoundingClientRect(), stageRect=stage.getBoundingClientRect(); let left=rect.right-stageRect.left+12; let top=rect.top-stageRect.top; if(left>stageRect.width-330) left=stageRect.width-330; if(top>stageRect.height-380) top=stageRect.height-380; if(top<20) top=20; propertiesPanel.style.left=left+'px'; propertiesPanel.style.top=top+'px'; }
+    function updatePropertiesPanelFromSelection(){ if(!selectedItem || selectedItems.size > 1){ propertiesPanel.style.display='none'; refreshTriggerTargetOptions(); return; } propName.value = selectedItem.dataset.name || ''; propOpacity.value=selectedItem.dataset.opacity||'100'; propAnim.value=selectedItem.dataset.anim||'none'; propTriggerAction.value=selectedItem.dataset.triggerAction||'none'; propTextGroup.style.display=selectedItem.dataset.type==='text'?'':'none'; propMediaGroup.style.display=selectedItem.dataset.type==='media'?'':'none'; propQuestionGroup.style.display=selectedItem.dataset.type==='question'?'':'none'; propBgGroup.style.display=''; if(selectedItem.dataset.type==='text'){ propTextStyle.value=selectedItem.dataset.textStyleVariant||'default'; propFontSize.value=selectedItem.dataset.fontSize||'18'; } if(selectedItem.dataset.type==='media'){ propMediaStyle.value=selectedItem.dataset.mediaFrameStyle||'card'; propMediaLoop.value=selectedItem.dataset.mediaLoop||'false'; propMediaAutoplay.value=selectedItem.dataset.mediaAutoplay||'false'; propMediaMute.value=selectedItem.dataset.mediaMute||'false'; } if(selectedItem.dataset.type==='question') propQuestionMode.value=selectedItem.dataset.qmode||'lock-correct'; propBgFit.value=stageVideoBg.style.display==='block' ? stageVideoBg.style.objectFit : 'contain'; refreshTriggerTargetOptions(); propTriggerTarget.value=selectedItem.dataset.triggerTarget||''; propertiesPanel.style.display='block'; updatePropertiesPanelPosition(); }
+
+    function refreshTriggerTargetOptions(){ const current = selectedItem?.dataset.triggerTarget || ''; propTriggerTarget.innerHTML = '<option value="">None</option>'; Array.from(document.querySelectorAll('.item')).forEach(item=>{ if (selectedItem && item === selectedItem) return; const opt=document.createElement('option'); opt.value=item.dataset.id; opt.textContent=item.dataset.name || item.dataset.type; propTriggerTarget.appendChild(opt); }); getSavedScenes().filter(s=>s.id!==AUTOSAVE_SCENE_ID).forEach(scene=>{ const opt=document.createElement('option'); opt.value='scene:'+scene.id; opt.textContent='Scene: '+scene.name; propTriggerTarget.appendChild(opt); }); propTriggerTarget.value = current; }
+    function runTrigger(item){ const action=item.dataset.triggerAction||'none'; const target=item.dataset.triggerTarget||''; if(action==='none' || !target) return; if(action==='scene' && target.startsWith('scene:')) { loadSceneById(target.replace('scene:','')); return; } const el = document.querySelector(`.item[data-id="${target}"]`); if(!el) return; if(action==='show'){ el.style.display='block'; playItemEntrance(el); } else if(action==='hide'){ el.style.display='none'; } else if(action==='toggle'){ el.style.display = el.style.display === 'none' ? 'block' : 'none'; if(el.style.display==='block') playItemEntrance(el); } }
+
+    function serializeBackground(){ const bg={ type: stageVideoBg.style.display==='block'?'video':'image', label: backgroundBtn.textContent, fit: stageVideoBg.style.objectFit || 'contain' }; if(bg.type==='video') bg.src=stageVideoBg.currentSrc||stageVideoBg.src||''; else bg.style=stage.style.backgroundImage; return bg; }
+    function restoreBackground(bg){
+      if(!bg) return;
+      if(bg.type==='video' && bg.src) {
+        setStageBackgroundVideo(bg.src,'Loaded Scene',{ suppressHistory:true, suppressAutosave:true });
+        stageVideoBg.style.objectFit = bg.fit || 'contain';
+      } else if(bg.style){
+        stageVideoBg.pause();
+        stageVideoBg.removeAttribute('src');
+        stageVideoBg.style.display='none';
+        stage.style.backgroundImage=bg.style;
+        backgroundBtn.textContent='🖼 Loaded Scene ▾';
+      }
+    }
+    function serializeItem(item){ const base={ id:item.dataset.id, type:item.dataset.type, left:item.style.left, top:item.style.top, width:item.dataset.width, ratio:item.dataset.ratio, rotation:item.dataset.rotation, locked:item.dataset.locked, opacity:item.dataset.opacity, z:item.style.zIndex, name:item.dataset.name, anim:item.dataset.anim, triggerAction:item.dataset.triggerAction, triggerTarget:item.dataset.triggerTarget, group:item.dataset.group || '' }; if(base.type==='image') base.src=item.querySelector('.stageImage')?.src||''; else if(base.type==='text'){ base.textStyleVariant=item.dataset.textStyleVariant; base.fontSize=item.dataset.fontSize; base.value=item.querySelector('.textBoxArea')?.value||''; } else if(base.type==='media'){ base.mediaFrameStyle=item.dataset.mediaFrameStyle;
+        base.mediaLoop=item.dataset.mediaLoop||'false';
+        base.mediaAutoplay=item.dataset.mediaAutoplay||'false';
+        base.mediaMute=item.dataset.mediaMute||'false'; base.urlValue=item.querySelector('.mediaUrlInput')?.value||''; base.posterValue=item.querySelector('.mediaPosterInput')?.value||''; const img=item.querySelector('.mediaImage'); const vid=item.querySelector('.mediaVideo'); const frame=item.querySelector('.mediaFrame'); if(img&&img.style.display==='block'){ base.mediaKind='image'; base.mediaSrc=img.src; } else if(vid&&vid.style.display==='block'){ base.mediaKind='video'; base.mediaSrc=vid.currentSrc||item.querySelector('.mediaVideoSource')?.src||''; } else if(frame&&frame.style.display==='block'){ base.mediaKind='frame'; base.mediaSrc=frame.src; } } else if(base.type==='timer'){
+        base.timerSeconds=item.dataset.timerSeconds||'0';
+        base.timerRunning=item.dataset.timerRunning||'false';
+        base.display=item.querySelector('.timer-display')?.textContent||'00:00';
+      } else if(base.type==='scoreboard'){ base.scoreA=item.querySelector('.score-a')?.textContent||'0'; base.scoreB=item.querySelector('.score-b')?.textContent||'0'; } else if(base.type==='question'){ base.qtitle=item.dataset.qtitle; base.qprompt=item.dataset.qprompt; base.qoptions=item.dataset.qoptions; base.qcorrect=item.dataset.qcorrect; base.qfeedback=item.dataset.qfeedback; base.qmode=item.dataset.qmode; base.qcompleted=item.dataset.qcompleted; } return base; }
+    function recreateItemFromData(data){ let item=null; const x=parseFloat(data.left), y=parseFloat(data.top); if(data.type==='image'){ item=createBaseItem('image',x,y,parseFloat(data.width),parseFloat(data.ratio)); const img=document.createElement('img'); img.className='stageImage'; img.src=data.src||''; item.querySelector('.dragShell').prepend(img); } else if(data.type==='text'){ item=createTextItem(x,y,data.textStyleVariant||'default'); item.querySelector('.textBoxArea').value=data.value||''; item.dataset.fontSize=data.fontSize||'18'; applyTextStyle(item); } else if(data.type==='media'){ item=createMediaItem(x,y); item.dataset.mediaFrameStyle=data.mediaFrameStyle||'card';
+        item.dataset.mediaLoop=data.mediaLoop||'false';
+        item.dataset.mediaAutoplay=data.mediaAutoplay||'false';
+        item.dataset.mediaMute=data.mediaMute||'false'; applyMediaFrameStyle(item); item.querySelector('.mediaUrlInput').value=data.urlValue||''; item.querySelector('.mediaPosterInput').value=data.posterValue||''; const img=item.querySelector('.mediaImage'); const vid=item.querySelector('.mediaVideo'); const src=item.querySelector('.mediaVideoSource'); const frame=item.querySelector('.mediaFrame'); if(data.mediaKind==='image'&&data.mediaSrc){ img.src=data.mediaSrc; img.style.display='block'; } else if(data.mediaKind==='video'&&data.mediaSrc){ src.src=data.mediaSrc; vid.style.display='block'; vid.load(); } else if(data.mediaKind==='frame'&&data.mediaSrc){ frame.src=data.mediaSrc; frame.style.display='block'; } } else if(data.type==='timer'){
+        item=createTimerItem(x,y);
+        item.dataset.timerSeconds=data.timerSeconds||'0';
+        item.dataset.timerRunning='false';
+        item.querySelector('.timer-display').textContent=data.display||formatTime(parseInt(data.timerSeconds||'0',10));
+      } else if(data.type==='scoreboard'){ item=createScoreboardItem(x,y); item.querySelector('.score-a').textContent=data.scoreA||'0'; item.querySelector('.score-b').textContent=data.scoreB||'0'; } else if(data.type==='question'){ item=createQuestionItem(x,y); item.dataset.qtitle=data.qtitle; item.dataset.qprompt=data.qprompt; item.dataset.qoptions=data.qoptions; item.dataset.qcorrect=data.qcorrect; item.dataset.qfeedback=data.qfeedback; item.dataset.qmode=data.qmode||'lock-correct'; item.dataset.qcompleted=data.qcompleted||'false'; renderQuestionCardFromItem(item); }
+      if(!item) return null; item.dataset.id=data.id||item.dataset.id; item.dataset.name=data.name||defaultNameForType(item.dataset.type); item.dataset.anim=data.anim||'none'; item.dataset.triggerAction=data.triggerAction||'none'; item.dataset.triggerTarget=data.triggerTarget||''; item.dataset.group=data.group||''; item.dataset.width=data.width; item.dataset.ratio=data.ratio; item.dataset.rotation=data.rotation||'0'; item.dataset.locked=data.locked||'false'; item.style.zIndex=data.z||String(++zCounter); applyItemBox(item); setItemOpacity(item, parseInt(data.opacity||'100',10)); return item; }
+    function serializeHotspot(h){ return { left:h.style.left, top:h.style.top, title:h.dataset.title, note:h.dataset.note, styleVariant:h.dataset.styleVariant, text:h.textContent }; }
+    function recreateHotspot(data){ hotspotCounter += 1; const h=document.createElement('div'); h.className='hotspot'; h.id='hotspot-'+hotspotCounter; h.style.left=data.left; h.style.top=data.top; h.dataset.title=data.title||''; h.dataset.note=data.note||''; h.dataset.styleVariant=data.styleVariant||'default'; h.dataset.locked='false'; h.textContent=data.text||'+'; stage.appendChild(h); applyHotspotStyle(h); h.addEventListener('pointerdown', hotspotPointerDownHandler(h)); h.addEventListener('click', hotspotClickHandler(h)); return h; }
+
+    function getSavedScenes(){ try { return JSON.parse(localStorage.getItem(SCENE_STORAGE_KEY) || '[]'); } catch { return []; } }
+    function setSavedScenes(list){ localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(list)); refreshSceneList(); }
+    function scenePreviewData(){
+      try {
+        const itemCount = document.querySelectorAll('.item').length;
+        const hotspotCount = document.querySelectorAll('.hotspot').length;
+        const bgLabel = (backgroundBtn.textContent || 'Scene').replace('▾','').trim();
+        const svg = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+            <defs>
+              <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0%" stop-color="#08111b"/>
+                <stop offset="100%" stop-color="#122235"/>
+              </linearGradient>
+            </defs>
+            <rect width="640" height="360" rx="24" fill="url(#g)"/>
+            <circle cx="180" cy="90" r="100" fill="rgba(125,211,252,0.12)"/>
+            <circle cx="520" cy="280" r="120" fill="rgba(255,255,255,0.06)"/>
+            <text x="28" y="56" fill="white" font-family="Arial, sans-serif" font-size="28" font-weight="700">${bgLabel}</text>
+            <text x="28" y="96" fill="rgba(255,255,255,0.78)" font-family="Arial, sans-serif" font-size="18">${itemCount} items • ${hotspotCount} hotspots</text>
+            <rect x="28" y="250" width="180" height="58" rx="14" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.12)"/>
+            <text x="48" y="286" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="700">Scene Preview</text>
+          </svg>`;
+        return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+      } catch {
+        return '';
+      }
+    }
+    function refreshSceneList(){ const scenes=getSavedScenes().filter(s=>s.id!==AUTOSAVE_SCENE_ID).filter(scene=>scene.name.toLowerCase().includes((sceneSearchInput.value||'').toLowerCase())); sceneThumbs.innerHTML=''; scenes.forEach(scene=>{ const card=document.createElement('div'); card.className='sceneCard'+(selectedSceneId===scene.id?' active':''); card.dataset.id=scene.id; card.innerHTML=`<div class="scenePreview" style="background-image:url('${scene.preview||''}')"></div><div><strong>${scene.name}</strong></div><div class="sceneMeta">${new Date(scene.updatedAt||scene.id).toLocaleString()} • ${(scene.items||[]).length} items</div>`; card.addEventListener('pointerdown', e=>{ e.preventDefault(); selectedSceneId=scene.id; sceneFileName.value=scene.name; refreshSceneList(); }); sceneThumbs.appendChild(card); }); refreshTriggerTargetOptions(); }
+    function captureScene(nameOverride=''){ return { id:String(Date.now()), name:nameOverride||sceneFileName.value||'New Scene', updatedAt:Date.now(), preview:'', background:serializeBackground(), drawing:localStorage.getItem(DRAW_STORAGE_KEY)||'', items:Array.from(document.querySelectorAll('.item')).map(serializeItem), hotspots:Array.from(document.querySelectorAll('.hotspot')).map(serializeHotspot) }; }
+    function stopAllWidgetTimers(){
+      document.querySelectorAll('.item[data-type="timer"]').forEach(item=>{
+        if(item._timerInterval){
+          clearInterval(item._timerInterval);
+          item._timerInterval = null;
+        }
+        item.dataset.timerRunning = 'false';
+      });
+    }
+    function clearStageContent(options = {}){
+      const { suppressHistory = true, suppressAutosave = true } = options;
+      stopAllWidgetTimers();
+      document.querySelectorAll('.item,.hotspot').forEach(el=>el.remove());
+      deselectItem();
+      hideHotspotEditor();
+      hideQuestionEditor();
+      clearDrawing({ suppressHistory, suppressAutosave });
+      groups={};
+      refreshLayersPanel();
+    }
+    function loadSceneById(id){ const scenes=getSavedScenes(); const scene=scenes.find(s=>s.id===id); if(!scene) return; clearStageContent({ suppressHistory:true, suppressAutosave:true }); restoreBackground(scene.background); if(scene.drawing){ localStorage.setItem(DRAW_STORAGE_KEY, scene.drawing); restoreDrawing(); } (scene.items||[]).forEach(recreateItemFromData); (scene.hotspots||[]).forEach(recreateHotspot); selectedSceneId=id; sceneFileName.value=scene.name; lastLoadedSceneSnapshot = JSON.stringify(scene); enterMoveMode(); refreshSceneList(); refreshLayersPanel(); updateSaveStatus('Scene loaded locally in this browser'); showToast('Scene loaded'); }
+    function saveCurrentScene(){ const scenes=getSavedScenes(); const name=sceneFileName.value.trim() || 'New Scene'; let scene = captureScene(name); scene.preview = scenePreviewData(); if(selectedSceneId){ const idx=scenes.findIndex(s=>s.id===selectedSceneId); if(idx>=0){ scene.id = selectedSceneId; scenes[idx] = scene; } else scenes.push(scene); } else { selectedSceneId=scene.id; scenes.push(scene); } setSavedScenes(scenes); lastLoadedSceneSnapshot = JSON.stringify(scene); updateSaveStatus('Saved locally in this browser'); showToast('Scene saved'); }
+    function duplicateCurrentScene(){ if(!selectedSceneId) return saveCurrentScene(); const source=getSavedScenes().find(s=>s.id===selectedSceneId); if(!source) return; const copy=JSON.parse(JSON.stringify(source)); copy.id=String(Date.now()); copy.name=(source.name||'Scene')+' Copy'; copy.updatedAt=Date.now(); const scenes=getSavedScenes(); scenes.push(copy); selectedSceneId=copy.id; setSavedScenes(scenes); sceneFileName.value=copy.name; showToast('Scene duplicated'); }
+    function exportSelectedScene(){ const scene=getSavedScenes().find(s=>s.id===selectedSceneId); if(!scene) return alert('Select a scene first.'); const blob=new Blob([JSON.stringify(scene,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=(scene.name||'scene')+'.json'; a.click(); URL.revokeObjectURL(a.href); showToast('Scene exported'); }
+    function exportAllScenes(){ const scenes=getSavedScenes().filter(s=>s.id!==AUTOSAVE_SCENE_ID); const blob=new Blob([JSON.stringify(scenes,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='all-scenes.json'; a.click(); URL.revokeObjectURL(a.href); showToast('All scenes exported'); }
+    function resetCurrentScene(){
+      if(lastLoadedSceneSnapshot){
+        try{
+          const scene = JSON.parse(lastLoadedSceneSnapshot);
+          clearStageContent({ suppressHistory:true, suppressAutosave:true });
+          restoreBackground(scene.background);
+          if(scene.drawing){ localStorage.setItem(DRAW_STORAGE_KEY, scene.drawing); restoreDrawing(); }
+          (scene.items||[]).forEach(recreateItemFromData);
+          (scene.hotspots||[]).forEach(recreateHotspot);
+          refreshLayersPanel();
+          deselectItem();
+          showToast('Scene reset');
+          updateSaveStatus('Scene reset to last loaded/saved version');
+          return;
+        }catch{}
+      }
+      showToast('No saved scene state to reset to');
+    }
+    function importSceneFile(file){ const reader=new FileReader(); reader.onload=()=>{ try{ const scene=JSON.parse(reader.result); scene.id=String(Date.now()); scene.updatedAt=Date.now(); scene.name=scene.name || 'Imported Scene'; const scenes=getSavedScenes(); scenes.push(scene); setSavedScenes(scenes); selectedSceneId=scene.id; sceneFileName.value=scene.name; showToast('Scene imported'); } catch { alert('Invalid scene file.'); } }; reader.readAsText(file); }
+
+    function getAutosaveScene(){ return getSavedScenes().find(s=>s.id===AUTOSAVE_SCENE_ID); }
+    function scheduleAutosave(){ clearTimeout(autosaveTimer); updateSaveStatus('Autosaving…'); autosaveTimer = setTimeout(()=>{ const scenes=getSavedScenes().filter(s=>s.id!==AUTOSAVE_SCENE_ID); const auto = captureScene('Autosave'); auto.id = AUTOSAVE_SCENE_ID; auto.preview = ''; auto.updatedAt = Date.now(); scenes.unshift(auto); localStorage.setItem(SCENE_STORAGE_KEY, JSON.stringify(scenes)); lastAutoSavedAt = auto.updatedAt; updateSaveStatus('Autosaved locally at ' + new Date(lastAutoSavedAt).toLocaleTimeString()); }, 1200); }
+
+    function hotspotPointerDownHandler(hotspot){ return function(e){ if(currentTool!=='move') return; if(hotspot.dataset.locked==='true') return; e.stopPropagation(); const rect=hotspot.getBoundingClientRect(), stageRect=stage.getBoundingClientRect(); const offsetX=e.clientX-rect.left, offsetY=e.clientY-rect.top; if(appMode==='build') openHotspotEditor(hotspot); hotspot.setPointerCapture(e.pointerId); function move(ev){ let x=ev.clientX-stageRect.left-offsetX, y=ev.clientY-stageRect.top-offsetY; if(snapEnabled){ x=snapValue(x); y=snapValue(y); } hotspot.style.left=x+'px'; hotspot.style.top=y+'px'; updateHotspotEditorPosition(); } function end(){ hotspot.removeEventListener('pointermove',move); hotspot.removeEventListener('pointerup',end); hotspot.removeEventListener('pointercancel',end); scheduleAutosave(); } hotspot.addEventListener('pointermove',move); hotspot.addEventListener('pointerup',end); hotspot.addEventListener('pointercancel',end); }; }
+    function hotspotClickHandler(hotspot){ return function(e){ e.stopPropagation(); if(appMode==='build') openHotspotEditor(hotspot); else { const t=hotspot.dataset.title||'Hotspot'; const n=hotspot.dataset.note||''; if(t||n) alert((t?t+'\n\n':'')+n); } }; }
+    function createHotspot(x,y){ hotspotCounter+=1; const hotspot=document.createElement('div'); hotspot.className='hotspot'; hotspot.id='hotspot-'+hotspotCounter; hotspot.textContent='+'; hotspot.style.left=x+'px'; hotspot.style.top=y+'px'; hotspot.dataset.title=''; hotspot.dataset.note=''; hotspot.dataset.locked='false'; hotspot.dataset.styleVariant='default'; stage.appendChild(hotspot); applyHotspotStyle(hotspot); hotspot.addEventListener('pointerdown', hotspotPointerDownHandler(hotspot)); hotspot.addEventListener('click', hotspotClickHandler(hotspot)); if(appMode==='build') openHotspotEditor(hotspot); pushHistory('Hotspot added'); scheduleAutosave(); return hotspot; }
+    function openHotspotEditor(hotspot){ if(presentationMode||appMode!=='build') return; selectedHotspot=hotspot; hotspotTitle.value=hotspot.dataset.title||''; hotspotNote.value=hotspot.dataset.note||''; hotspotStyleSelect.value=hotspot.dataset.styleVariant||'default'; hotspotEditor.style.display='block'; updateHotspotEditorPosition(); }
+    function hideHotspotEditor(){ hotspotEditor.style.display='none'; selectedHotspot=null; }
+    function updateHotspotEditorPosition(){ if(!selectedHotspot||hotspotEditor.style.display==='none') return; const rect=selectedHotspot.getBoundingClientRect(), stageRect=stage.getBoundingClientRect(); let left=rect.left-stageRect.left+40, top=rect.top-stageRect.top-20; if(left>stageRect.width-340) left=stageRect.width-340; if(top>stageRect.height-220) top=stageRect.height-220; if(top<10) top=10; hotspotEditor.style.left=left+'px'; hotspotEditor.style.top=top+'px'; }
+
+    function openQuestionEditorForItem(item){ if(appMode!=='build') return; selectedQuestionItem=item; questionTitleInput.value=item.dataset.qtitle||''; questionTextInput.value=item.dataset.qprompt||''; const options=JSON.parse(item.dataset.qoptions||'["Option A","Option B","Option C","Option D"]'); questionOption1.value=options[0]||''; questionOption2.value=options[1]||''; questionOption3.value=options[2]||''; questionOption4.value=options[3]||''; questionCorrectSelect.value=item.dataset.qcorrect||'0'; questionAnswerInput.value=item.dataset.qfeedback||''; questionEditor.style.display='block'; updateQuestionEditorPosition(); }
+    function hideQuestionEditor(){ questionEditor.style.display='none'; selectedQuestionItem=null; }
+    function updateQuestionEditorPosition(){ if(!selectedQuestionItem||questionEditor.style.display==='none') return; const rect=selectedQuestionItem.getBoundingClientRect(), stageRect=stage.getBoundingClientRect(); let left=rect.left-stageRect.left+40, top=rect.top-stageRect.top-20; if(left>stageRect.width-340) left=stageRect.width-340; if(top>stageRect.height-280) top=stageRect.height-280; if(top<10) top=10; questionEditor.style.left=left+'px'; questionEditor.style.top=top+'px'; }
+
+    function applyFolderContentVisibility(){
+      const showContent = !!activeFolder && ((lessonResourcesOpen && earlyYearsOpen) || (widgetsOpen && activeFolder === 'widgets'));
+      folderContentTitle.style.display = showContent ? 'block' : 'none';
+      folderContent.style.display = showContent ? 'block' : 'none';
+      document.querySelectorAll('.folderGrid').forEach(grid=>grid.classList.remove('active'));
+      if(showContent && document.getElementById('folder-'+activeFolder)){
+        document.getElementById('folder-'+activeFolder).classList.add('active');
+      }
+      if(sidebarCollapsed) hideLibraryVisuals();
+      else { layoutFolderItems(); layoutWidgetMasters(); }
+    }
+    function showFolder(folderName){
+      activeFolder=folderName;
+      [planetsBtn,infoCardsBtn,nameTagsBtn,widgetsFolderBtn].forEach(btn=>btn.classList.remove('active'));
+      if(folderName==='planets'){ planetsBtn.classList.add('active'); folderContentTitle.textContent='Planets'; }
+      else if(folderName==='infocards'){ infoCardsBtn.classList.add('active'); folderContentTitle.textContent='InfoCards'; }
+      else if(folderName==='nametags'){ nameTagsBtn.classList.add('active'); folderContentTitle.textContent='NameTags'; }
+      else if(folderName==='widgets'){ widgetsFolderBtn.classList.add('active'); folderContentTitle.textContent='Widgets'; }
+      applyFolderContentVisibility();
+    }
+    function getSlotPosition(itemId){ const slot=byId('slot-'+itemId), stageRect=stage.getBoundingClientRect(), slotRect=slot.getBoundingClientRect(); const item=byId(itemId); return { x:slotRect.left-stageRect.left+(slotRect.width-item.offsetWidth)/2, y:slotRect.top-stageRect.top+(slotRect.height-item.offsetHeight)/2 }; }
+    function getWidgetSlotPosition(slotId, element){ const slot=byId(slotId), stageRect=stage.getBoundingClientRect(), slotRect=slot.getBoundingClientRect(); return { x:slotRect.left-stageRect.left+(slotRect.width-element.offsetWidth)/2, y:slotRect.top-stageRect.top+(slotRect.height-element.offsetHeight)/2 }; }
+    function layoutFolderItems(){ if(sidebarCollapsed){ hideLibraryVisuals(); return; } folderItems.forEach(item=>{ const widgetIds=['widget-timer-master','widget-scoreboard-master','widget-hotspot-tool-master','widget-text-tool-master','widget-media-tool-master']; if(widgetIds.includes(item.id)) return; const shouldShow=itemFolderMap[item.id]===activeFolder&&lessonResourcesOpen&&earlyYearsOpen; item.style.display=shouldShow?'block':'none'; if(shouldShow){ requestAnimationFrame(()=>{ const pos=getSlotPosition(item.id); item.style.left=pos.x+'px'; item.style.top=pos.y+'px'; }); } }); }
+    function layoutWidgetMasters(){ if(sidebarCollapsed){ hideLibraryVisuals(); return; } const show=widgetsOpen&&activeFolder==='widgets'&&!presentationMode; [timerMaster,scoreboardMaster,hotspotToolMaster,textToolMaster,mediaToolMaster].forEach(el=>el.style.display=show?'block':'none'); if(!show) return; [['slot-widget-timer',timerMaster],['slot-widget-scoreboard',scoreboardMaster],['slot-widget-hotspot-tool',hotspotToolMaster],['slot-widget-text-tool',textToolMaster],['slot-widget-media-tool',mediaToolMaster]].forEach(([slotId,el])=>{ const pos=getWidgetSlotPosition(slotId,el); el.style.left=pos.x+'px'; el.style.top=pos.y+'px'; }); }
+
+    function isTouchPointerEvent(e){ return e.pointerType === 'touch' || e.pointerType === 'pen'; }
+    function closeTransientPanels(){ backgroundMenu.classList.remove('open'); liveBackgroundMenu.classList.remove('open'); appModeMenu.classList.remove('open'); projectMenu.classList.remove('open'); textToolMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); }
+    function clampToStage(item, left, top){ const stageRect=stage.getBoundingClientRect(); const width=getItemWidth(item); const height=getItemHeight(item); const maxLeft=Math.max(0, stageRect.width-width); const maxTop=Math.max(0, stageRect.height-height); return { left:Math.min(Math.max(0,left),maxLeft), top:Math.min(Math.max(0,top),maxTop) }; }
+    function handleTouchDoubleTap(item, e){ if(!isTouchPointerEvent(e)) return false; const now=Date.now(); const isDoubleTap=now-lastTapAt<DOUBLE_TAP_MS; lastTapAt=now; if(!isDoubleTap) return false; if(item.dataset.type==='question'){ openQuestionEditorForItem(item); return true; } if(item.dataset.type==='text'){ item.querySelector('.textBoxArea')?.focus(); return true; } return false; }
+
+    function wireItemInteractions(item){
+      const shell=item.querySelector('.dragShell');
+      function startItemDrag(e, draggedItem){
+        if (draggedItem.dataset.locked === 'true') return;
+        if (currentTool !== 'move') return;
+
+        const additive = e.shiftKey || e.metaKey || e.ctrlKey;
+        selectItem(draggedItem, additive);
+
+        const movingItems = selectedItems.size > 1 && selectedItems.has(draggedItem) ? Array.from(selectedItems) : [draggedItem];
+        const starts = movingItems.map(it=>({it,left:parseFloat(it.style.left)||0,top:parseFloat(it.style.top)||0}));
+        const startX=e.clientX, startY=e.clientY;
+        const isTouch=isTouchPointerEvent(e);
+        let hasMoved=false;
+
+        activePointerDrag = { pointerId:e.pointerId, item:draggedItem };
+        draggedItem.setPointerCapture(e.pointerId);
+
+        function move(ev){
+          if(ev.pointerId !== e.pointerId) return;
+          const dx=ev.clientX-startX, dy=ev.clientY-startY;
+
+          if(isTouch && !hasMoved){
+            const dist=Math.hypot(dx,dy);
+            if(dist < TOUCH_DRAG_THRESHOLD) return;
+          }
+
+          hasMoved=true;
+
+          starts.forEach(({it,left,top})=>{
+            let x=left+dx, y=top+dy;
+            if(snapEnabled){ x=snapValue(x); y=snapValue(y); }
+            const clamped=clampToStage(it,x,y);
+            it.style.left=clamped.left+'px';
+            it.style.top=clamped.top+'px';
+          });
+
+          repositionFloatingToolbar();
+          updatePropertiesPanelPosition();
+          updateSpotlight();
+          cloneBin.classList.toggle('active', isOverBin(draggedItem));
+        }
+
+        function end(ev){
+          if(ev && ev.pointerId !== e.pointerId) return;
+          if(isOverBin(draggedItem)){ movingItems.forEach(it=>it.remove()); deselectItem(); }
+          cloneBin.classList.remove('active');
+          activePointerDrag = null;
+          draggedItem.removeEventListener('pointermove',move);
+          draggedItem.removeEventListener('pointerup',end);
+          draggedItem.removeEventListener('pointercancel',end);
+          if(hasMoved){ pushHistory('Items moved'); scheduleAutosave(); refreshLayersPanel(); }
+        }
+
+        draggedItem.addEventListener('pointermove',move);
+        draggedItem.addEventListener('pointerup',end);
+        draggedItem.addEventListener('pointercancel',end);
+      }
+
+      shell.addEventListener('pointerdown', e=>{
+        const hardBlocked = e.target.closest('.resizeHandle,.rotateHandle,.moveHandle,.mediaUrlInput,.mediaPosterInput,.textBoxArea,.mediaOpenLink');
+        const liveInteractive = appMode==='live' && e.target.closest('.widgetMiniBtn,.widgetActionBtn,.questionOptionBtn,.mediaFrame,.mediaVideo,.mediaOpenLink');
+        if(hardBlocked) return;
+        if(liveInteractive) return;
+        if(item.dataset.locked==='true') return;
+        if(currentTool!=='move') return;
+
+        closeTransientPanels();
+
+        if (e.shiftKey || e.metaKey || e.ctrlKey) { selectItem(item, true); e.preventDefault(); return; }
+
+        selectItem(item);
+
+        if(handleTouchDoubleTap(item, e)){
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
+        e.preventDefault();
+        startItemDrag(e,item);
+      });
+
+      shell.addEventListener('dblclick', e=>{ e.stopPropagation(); if(item.dataset.type==='question') openQuestionEditorForItem(item); if(item.dataset.type==='text') item.querySelector('.textBoxArea')?.focus(); });
+
+      item.querySelectorAll('.resizeHandle').forEach(handle=>{ handle.addEventListener('pointerdown', e=>{ if(item.dataset.locked==='true') return; e.stopPropagation(); e.preventDefault(); selectItem(item); const startX=e.clientX,startY=e.clientY,startWidth=getItemWidth(item),startRotation=parseFloat(item.dataset.rotation||'0'); const signX=handle.classList.contains('nw')||handle.classList.contains('sw')?-1:1; const signY=handle.classList.contains('nw')||handle.classList.contains('ne')?-1:1; const factor=(signX+signY)/2||1; handle.setPointerCapture(e.pointerId); function move(ev){ const dx=ev.clientX-startX, dy=ev.clientY-startY; let delta=(dx*signX+dy*signY)*0.8*factor; let newW=Math.max(60,startWidth+delta); if(snapEnabled) newW=snapValue(newW); item.dataset.width=String(newW); item.dataset.rotation=String(startRotation); applyItemBox(item); repositionFloatingToolbar(); updatePropertiesPanelPosition(); updateSpotlight(); } function end(){ handle.removeEventListener('pointermove',move); handle.removeEventListener('pointerup',end); handle.removeEventListener('pointercancel',end); pushHistory('Item resized'); scheduleAutosave(); refreshLayersPanel(); } handle.addEventListener('pointermove',move); handle.addEventListener('pointerup',end); handle.addEventListener('pointercancel',end); }); });
+      const rotateHandle=item.querySelector('.rotateHandle'); rotateHandle?.addEventListener('pointerdown', e=>{ if(item.dataset.locked==='true') return; e.stopPropagation(); e.preventDefault(); selectItem(item); const rect=item.getBoundingClientRect(), cx=rect.left+rect.width/2, cy=rect.top+rect.height/2; rotateHandle.setPointerCapture(e.pointerId); function move(ev){ let angle=Math.atan2(ev.clientY-cy, ev.clientX-cx)*180/Math.PI+90; if(snapEnabled) angle=Math.round(angle/15)*15; item.dataset.rotation=String(angle); applyItemBox(item); repositionFloatingToolbar(); updatePropertiesPanelPosition(); updateSpotlight(); } function end(){ rotateHandle.removeEventListener('pointermove',move); rotateHandle.removeEventListener('pointerup',end); rotateHandle.removeEventListener('pointercancel',end); pushHistory('Item rotated'); scheduleAutosave(); } rotateHandle.addEventListener('pointermove',move); rotateHandle.addEventListener('pointerup',end); rotateHandle.addEventListener('pointercancel',end); });
+
+      if(item.dataset.type==='text'){ item.querySelector('.textBoxArea')?.addEventListener('input', ()=>{ item.dataset.name = item.querySelector('.textBoxArea').value.trim().slice(0,20) || 'Text'; updateSelectionStatus(); refreshLayersPanel(); scheduleAutosave(); }); }
+    }
+
+    function isOverBin(item){ const itemRect=item.getBoundingClientRect(), binRect=cloneBin.getBoundingClientRect(); return !(itemRect.right<binRect.left||itemRect.left>binRect.right||itemRect.bottom<binRect.top||itemRect.top>binRect.bottom); }
+
+    function cloneItem(item){ const data=serializeItem(item); data.left=(parseFloat(data.left)+24)+'px'; data.top=(parseFloat(data.top)+24)+'px'; data.id='item-'+Date.now()+'-'+Math.floor(Math.random()*10000); const clone=recreateItemFromData(data); selectItem(clone); pushHistory('Item duplicated'); scheduleAutosave(); }
+
+    function refreshLayersPanel(){ const items=Array.from(document.querySelectorAll('.item')).sort((a,b)=>parseInt(b.style.zIndex,10)-parseInt(a.style.zIndex,10)); layersList.innerHTML=''; items.forEach(item=>{ const row=document.createElement('div'); row.className='layerRow'+((selectedItems.has(item)||selectedItem===item)?' active':''); row.innerHTML=`<button class="tinyBtn drag-order">↕</button><div class="layerName">${item.dataset.name || item.dataset.type}</div><button class="tinyBtn layer-lock">${item.dataset.locked==='true'?'🔓':'🔒'}</button><button class="tinyBtn layer-eye">👁</button>`; row.addEventListener('pointerdown', e=>{ if(e.target.closest('button')) return; selectItem(item, e.shiftKey||e.metaKey||e.ctrlKey); }); row.querySelector('.layer-lock').addEventListener('pointerdown', e=>{ e.stopPropagation(); item.dataset.locked=item.dataset.locked==='true'?'false':'true'; refreshLayersPanel(); updateSelectionVisuals(); scheduleAutosave(); }); row.querySelector('.layer-eye').addEventListener('pointerdown', e=>{ e.stopPropagation(); item.style.display=item.style.display==='none'?'block':'none'; scheduleAutosave(); }); layersList.appendChild(row); }); updateSelectionStatus(); }
+
+    function groupSelected(){ if(selectedItems.size < 2) return; const gid='group-'+Date.now(); selectedItems.forEach(item=>item.dataset.group=gid); groups[gid]=Array.from(selectedItems).map(it=>it.dataset.id); showToast('Grouped'); refreshLayersPanel(); scheduleAutosave(); }
+    function ungroupSelected(){ Array.from(selectedItems).forEach(item=>{ if(item.dataset.group) delete groups[item.dataset.group]; item.dataset.group=''; }); showToast('Ungrouped'); refreshLayersPanel(); scheduleAutosave(); }
+    function alignSelectedLeft(){ if(selectedItems.size < 2) return; const min=Math.min(...Array.from(selectedItems).map(i=>parseFloat(i.style.left))); selectedItems.forEach(i=>i.style.left=min+'px'); scheduleAutosave(); }
+    function alignSelectedTop(){ if(selectedItems.size < 2) return; const min=Math.min(...Array.from(selectedItems).map(i=>parseFloat(i.style.top))); selectedItems.forEach(i=>i.style.top=min+'px'); scheduleAutosave(); }
+    function distributeSelectedH(){ const items=Array.from(selectedItems).sort((a,b)=>parseFloat(a.style.left)-parseFloat(b.style.left)); if(items.length<3) return; const first=parseFloat(items[0].style.left), last=parseFloat(items[items.length-1].style.left), gap=(last-first)/(items.length-1); items.forEach((it,idx)=>it.style.left=(first+gap*idx)+'px'); scheduleAutosave(); }
+    function distributeSelectedV(){ const items=Array.from(selectedItems).sort((a,b)=>parseFloat(a.style.top)-parseFloat(b.style.top)); if(items.length<3) return; const first=parseFloat(items[0].style.top), last=parseFloat(items[items.length-1].style.top), gap=(last-first)/(items.length-1); items.forEach((it,idx)=>it.style.top=(first+gap*idx)+'px'); scheduleAutosave(); }
+
+    function snapshotState(){ return JSON.stringify({ background:serializeBackground(), drawing:localStorage.getItem(DRAW_STORAGE_KEY)||'', items:Array.from(document.querySelectorAll('.item')).map(serializeItem), hotspots:Array.from(document.querySelectorAll('.hotspot')).map(serializeHotspot), scene:selectedSceneId||'', sceneName:sceneFileName.value||'' }); }
+    function restoreSnapshot(snapshot){ try{ const data=JSON.parse(snapshot); clearStageContent({ suppressHistory:true, suppressAutosave:true }); restoreBackground(data.background); if(data.drawing){ localStorage.setItem(DRAW_STORAGE_KEY, data.drawing); restoreDrawing(); } (data.items||[]).forEach(recreateItemFromData); (data.hotspots||[]).forEach(recreateHotspot); selectedSceneId=data.scene||null; sceneFileName.value=data.sceneName||''; refreshSceneList(); refreshLayersPanel(); } catch{} }
+    function pushHistory(label){ undoStack.push({label,snapshot:snapshotState()}); if(undoStack.length>40) undoStack.shift(); redoStack=[]; historyInfo.textContent = undoStack.length ? `Latest: ${label}` : 'No actions yet.'; }
+    function undo(){ if(undoStack.length<2) return; const current=undoStack.pop(); redoStack.push(current); const prev=undoStack[undoStack.length-1]; restoreSnapshot(prev.snapshot); historyInfo.textContent = `Undid: ${current.label}`; }
+    function redo(){ if(!redoStack.length) return; const state=redoStack.pop(); undoStack.push(state); restoreSnapshot(state.snapshot); historyInfo.textContent = `Redid: ${state.label}`; }
+
+    sidebarCollapseBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); sidebarCollapsed=true; updateSidebarState(); });
+    sidebarReopenBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); sidebarCollapsed=false; updateSidebarState(); });
+    teacherToggle.addEventListener('pointerdown', e=>{ e.preventDefault(); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); teacherMenu.classList.toggle('open'); });
+    document.addEventListener('pointerdown', e=>{ if(!e.target.closest('#teacherMenu')&&!e.target.closest('#teacherToggle')) teacherMenu.classList.remove('open'); if(!e.target.closest('#appModeBtn')&&!e.target.closest('#appModeMenu')) appModeMenu.classList.remove('open'); if(!e.target.closest('#backgroundBtn')&&!e.target.closest('#backgroundMenu')) backgroundMenu.classList.remove('open'); if(!e.target.closest('#liveBackgroundMenu')&&!e.target.closest('#liveQuickBackgroundBtn')) { liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); } if(!e.target.closest('#textToolBtn')&&!e.target.closest('#textToolMenu')) textToolMenu.classList.remove('open'); if(!e.target.closest('#projectMenuBtn')&&!e.target.closest('#projectMenu')) projectMenu.classList.remove('open'); if(!e.target.closest('#layersPanel')&&!e.target.closest('#layersPanelBtn')) layersPanel.classList.remove('open'); if(!e.target.closest('#historyPanel')&&!e.target.closest('#historyPanelBtn')) historyPanel.classList.remove('open'); });
+    appModeBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); appModeMenu.classList.toggle('open'); backgroundMenu.classList.remove('open'); textToolMenu.classList.remove('open'); });
+    backgroundBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); backgroundMenu.classList.toggle('open'); appModeMenu.classList.remove('open'); textToolMenu.classList.remove('open'); projectMenu.classList.remove('open'); teacherMenu.classList.remove('open'); });
+    textToolBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); textToolMenu.classList.toggle('open'); appModeMenu.classList.remove('open'); backgroundMenu.classList.remove('open'); projectMenu.classList.remove('open'); });
+    projectMenuBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); projectMenu.classList.toggle('open'); appModeMenu.classList.remove('open'); backgroundMenu.classList.remove('open'); textToolMenu.classList.remove('open'); });
+    scenePanelBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); projectMenu.classList.remove('open'); scenePanel.classList.remove('collapsed'); updateScenePanelState(); refreshSceneList(); });
+    layersPanelBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); layersPanel.classList.toggle('open'); refreshLayersPanel(); });
+    historyPanelBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); projectMenu.classList.remove('open'); historyPanel.classList.toggle('open'); });
+    closeScenePanel.addEventListener('pointerdown', ()=>{ scenePanel.classList.add('collapsed'); updateScenePanelState(); });
+    scenePanelReopenBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); scenePanel.classList.remove('collapsed'); updateScenePanelState(); refreshSceneList(); });
+    closeLayersPanel.addEventListener('pointerdown', ()=>layersPanel.classList.remove('open')); closeHistoryPanel.addEventListener('pointerdown', ()=>historyPanel.classList.remove('open'));
+
+    appModeMenu.querySelectorAll('[data-appmode]').forEach(btn=>btn.addEventListener('pointerdown', e=>{ e.preventDefault(); setAppMode(btn.dataset.appmode); enterMoveMode(); appModeMenu.classList.remove('open'); }));
+    backgroundMenu.querySelectorAll('[data-bg]').forEach(btn=>btn.addEventListener('pointerdown', e=>{ e.preventDefault(); const label=btn.textContent.replace('🖼 ',''); setStageBackgroundImage(btn.dataset.bg,label); backgroundMenu.classList.remove('open'); }));
+    uploadBgImageBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); bgImageUploadInput.click(); }); uploadBgVideoBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); bgVideoUploadInput.click(); }); bgImageUrlBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); promptForBackgroundUrl('image'); }); bgVideoUrlBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); promptForBackgroundUrl('video'); });
+    bgImageUploadInput.addEventListener('change', e=>{ const file=e.target.files&&e.target.files[0]; if(!file) return; setStageBackgroundImage(URL.createObjectURL(file),'Custom Image'); backgroundMenu.classList.remove('open'); });
+    bgVideoUploadInput.addEventListener('change', e=>{ const file=e.target.files&&e.target.files[0]; if(!file) return; setStageBackgroundVideo(URL.createObjectURL(file),'Custom Video'); backgroundMenu.classList.remove('open'); });
+
+    saveSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); saveCurrentScene(); pushHistory('Scene saved'); });
+    duplicateSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); duplicateCurrentScene(); });
+    loadSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!selectedSceneId) return alert('Select a scene first.'); loadSceneById(selectedSceneId); pushHistory('Scene loaded'); scenePanel.classList.remove('open'); });
+    deleteSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!selectedSceneId) return alert('Select a scene first.'); const scenes=getSavedScenes().filter(s=>s.id!==selectedSceneId); setSavedScenes(scenes); selectedSceneId=null; sceneFileName.value=''; showToast('Scene deleted'); });
+    exportSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); exportSelectedScene(); });
+    importSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); sceneImportInput.click(); });
+    exportAllScenesBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); exportAllScenes(); });
+    resetCurrentSceneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); resetCurrentScene(); });
+    sceneImportInput.addEventListener('change', e=>{ const file=e.target.files&&e.target.files[0]; if(file) importSceneFile(file); sceneImportInput.value=''; });
+    sceneSearchInput.addEventListener('input', refreshSceneList);
+
+    modeAddQuestion.addEventListener('pointerdown', e=>{ e.preventDefault(); currentTool==='question'?enterMoveMode():enterQuestionMode(); });
+    modeAddHotspot.addEventListener('pointerdown', e=>{ e.preventDefault(); currentTool==='hotspot'?enterMoveMode():enterHotspotMode(); });
+    modeAddMedia.addEventListener('pointerdown', e=>{ e.preventDefault(); currentTool==='media'?enterMoveMode():enterMediaMode(); });
+    textToolMenu.querySelectorAll('[data-texttool]').forEach(btn=>btn.addEventListener('pointerdown', e=>{ e.preventDefault(); const variant=btn.dataset.texttool==='boxed'?'default':btn.dataset.texttool; if(currentTool==='text'&&pendingTextVariant===variant) enterMoveMode(); else enterTextMode(variant); textToolBtn.textContent=btn.textContent+' ▾'; textToolMenu.classList.remove('open'); }));
+    modeAnnotate.addEventListener('pointerdown', e=>{ e.preventDefault(); currentTool==='annotate'?enterMoveMode():enterAnnotateMode(); });
+    modeCreateActivity.addEventListener('pointerdown', e=>{ e.preventDefault(); activateModeButton(modeCreateActivity); resetPendingModes(); annotateToolbar.classList.remove('visible'); setHint('Mode: Create Activity'); });
+
+    lessonResourcesBtn.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      lessonResourcesOpen=!lessonResourcesOpen;
+      earlyYearsWrap.style.display=lessonResourcesOpen?'block':'none';
+      if(!lessonResourcesOpen){
+        earlyYearsOpen=false;
+        earlyYearsFoldersWrap.style.display='none';
+        if(activeFolder !== 'widgets') activeFolder = null;
+      }
+      applyFolderContentVisibility();
+    });
+    earlyYearsBtn.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      earlyYearsOpen=!earlyYearsOpen;
+      earlyYearsFoldersWrap.style.display=earlyYearsOpen?'block':'none';
+      if(!earlyYearsOpen && ['planets','infocards','nametags'].includes(activeFolder)) activeFolder = null;
+      applyFolderContentVisibility();
+    });
+    widgetsRootBtn.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      widgetsOpen=!widgetsOpen;
+      widgetsWrap.style.display=widgetsOpen?'block':'none';
+      if(!widgetsOpen && activeFolder === 'widgets') activeFolder = null;
+      applyFolderContentVisibility();
+    });
+    planetsBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); showFolder('planets'); }); infoCardsBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); showFolder('infocards'); }); nameTagsBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); showFolder('nametags'); }); widgetsFolderBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); showFolder('widgets'); });
+
+    penColorSelect.addEventListener('change', ()=>annotationColor=penColorSelect.value);
+    annotateDrawBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); annotationTool='draw'; updateAnnotateToolUI(); });
+    annotateEraseBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); annotationTool='erase'; updateAnnotateToolUI(); });
+    eraserSizeSelect.addEventListener('change', ()=>{ eraserSize=parseInt(eraserSizeSelect.value,10)||40; });
+    clearInkInlineBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); clearDrawing(); });
+    presentationModeBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); presentationMode=!presentationMode; updatePresentationMode(); });
+    freezeAllBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); document.querySelectorAll('.item,.hotspot').forEach(el=>el.dataset.locked='true'); updateSelectionVisuals(); refreshLayersPanel(); scheduleAutosave(); });
+    unfreezeAllBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); document.querySelectorAll('.item,.hotspot').forEach(el=>el.dataset.locked='false'); updateSelectionVisuals(); refreshLayersPanel(); scheduleAutosave(); });
+    spotlightBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); spotlightMode=!spotlightMode; updateSpotlight(); });
+    toggleGridBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); gridVisible=!gridVisible; gridOverlay.style.display=gridVisible?'block':'none'; });
+    toggleSafeZoneBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); safeZonesVisible=!safeZonesVisible; safeZoneOverlay.style.display=safeZonesVisible?'block':'none'; });
+    liveQuickBackgroundBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); teacherMenu.classList.remove('open'); appModeMenu.classList.remove('open'); textToolMenu.classList.remove('open'); projectMenu.classList.remove('open'); backgroundMenu.classList.remove('open'); liveBackgroundMenu.classList.toggle('open'); liveQuickBackgroundBtn.classList.toggle('active', liveBackgroundMenu.classList.contains('open')); });
+    liveBackgroundMenu.querySelectorAll('[data-livebg]').forEach(btn=>btn.addEventListener('pointerdown', e=>{ e.preventDefault(); const label=btn.textContent.replace('🖼 ',''); setStageBackgroundImage(btn.dataset.livebg,label); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); }));
+    liveUploadBgImageBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); bgImageUploadInput.click(); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); });
+    liveUploadBgVideoBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); bgVideoUploadInput.click(); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); });
+    liveBgImageUrlBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); promptForBackgroundUrl('image'); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); });
+    liveBgVideoUrlBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); promptForBackgroundUrl('video'); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); });
+    liveQuickAnnotateBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); teacherMenu.classList.remove('open'); liveBackgroundMenu.classList.remove('open'); currentTool==='annotate' ? enterMoveMode() : enterAnnotateMode(); liveQuickAnnotateBtn.classList.toggle('active', currentTool==='annotate'); liveQuickBackgroundBtn.classList.remove('active'); });
+    clearDrawingsBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); clearDrawing(); });
+    clearHotspotsBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); document.querySelectorAll('.hotspot').forEach(h=>h.remove()); hideHotspotEditor(); scheduleAutosave(); });
+    clearWidgetsBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); document.querySelectorAll('.item').forEach(item=>{ if(['timer','scoreboard','media','text'].includes(item.dataset.type)) item.remove(); }); if(selectedItem && !document.body.contains(selectedItem)) deselectItem(); refreshLayersPanel(); scheduleAutosave(); });
+    resetBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); clearStageContent(); enterMoveMode(); pushHistory('Stage reset'); });
+    exitLiveBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); liveBackgroundMenu.classList.remove('open'); liveQuickBackgroundBtn.classList.remove('active'); liveQuickAnnotateBtn.classList.remove('active'); setAppMode('build'); enterMoveMode(); teacherMenu.classList.remove('open'); showToast('Returned to Build mode'); });
+
+    tbSnap.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); snapEnabled=!snapEnabled; updateSelectionVisuals(); });
+    tbLock.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(!selectedItem) return; selectedItem.dataset.locked=selectedItem.dataset.locked==='true'?'false':'true'; updateSelectionVisuals(); refreshLayersPanel(); scheduleAutosave(); });
+    tbDuplicate.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(!selectedItem||appMode!=='build') return; cloneItem(selectedItem); });
+    tbDelete.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(!selectedItem) return; Array.from(selectedItems).forEach(it=>it.remove()); deselectItem(); refreshLayersPanel(); pushHistory('Item deleted'); scheduleAutosave(); });
+    tbFront.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(!selectedItem) return; selectedItem.style.zIndex=String(++zCounter); repositionFloatingToolbar(); updatePropertiesPanelPosition(); refreshLayersPanel(); scheduleAutosave(); });
+    tbBack.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(!selectedItem) return; selectedItem.style.zIndex=String(Math.max(50,parseInt(selectedItem.style.zIndex||'100',10)-10)); repositionFloatingToolbar(); updatePropertiesPanelPosition(); refreshLayersPanel(); scheduleAutosave(); });
+    tbProps.addEventListener('pointerdown', e=>{ e.preventDefault(); e.stopPropagation(); if(!selectedItem || selectedItems.size>1) return; propertiesPanel.style.display=propertiesPanel.style.display==='none'?'block':'none'; updatePropertiesPanelFromSelection(); });
+
+    propName.addEventListener('input', ()=>{ if(!selectedItem||selectedItems.size>1) return; selectedItem.dataset.name=propName.value||defaultNameForType(selectedItem.dataset.type); refreshLayersPanel(); updateSelectionStatus(); scheduleAutosave(); });
+    propOpacity.addEventListener('input', ()=>{ if(!selectedItem) return; setItemOpacity(selectedItem,parseInt(propOpacity.value,10)); scheduleAutosave(); });
+    propAnim.addEventListener('change', ()=>{ if(!selectedItem||selectedItems.size>1) return; selectedItem.dataset.anim=propAnim.value; scheduleAutosave(); });
+    propTriggerAction.addEventListener('change', ()=>{ if(!selectedItem||selectedItems.size>1) return; selectedItem.dataset.triggerAction=propTriggerAction.value; scheduleAutosave(); });
+    propTriggerTarget.addEventListener('change', ()=>{ if(!selectedItem||selectedItems.size>1) return; selectedItem.dataset.triggerTarget=propTriggerTarget.value; scheduleAutosave(); });
+    propTextStyle.addEventListener('change', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='text') return; selectedItem.dataset.textStyleVariant=propTextStyle.value; if(propTextStyle.value==='header'&&parseInt(selectedItem.dataset.fontSize||'18',10)<30){ selectedItem.dataset.fontSize='40'; propFontSize.value='40'; } applyTextStyle(selectedItem); scheduleAutosave(); });
+    propFontSize.addEventListener('input', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='text') return; selectedItem.dataset.fontSize=propFontSize.value; applyTextStyle(selectedItem); scheduleAutosave(); });
+    propMediaStyle.addEventListener('change', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='media') return; selectedItem.dataset.mediaFrameStyle=propMediaStyle.value; applyMediaFrameStyle(selectedItem); scheduleAutosave(); });
+    propMediaLoop.addEventListener('change', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='media') return; selectedItem.dataset.mediaLoop=propMediaLoop.value; applyMediaFrameStyle(selectedItem); scheduleAutosave(); });
+    propMediaAutoplay.addEventListener('change', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='media') return; selectedItem.dataset.mediaAutoplay=propMediaAutoplay.value; applyMediaFrameStyle(selectedItem); scheduleAutosave(); });
+    propMediaMute.addEventListener('change', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='media') return; selectedItem.dataset.mediaMute=propMediaMute.value; applyMediaFrameStyle(selectedItem); scheduleAutosave(); });
+    propBgFit.addEventListener('change', ()=>{ stageVideoBg.style.objectFit=propBgFit.value; scheduleAutosave(); });
+    propQuestionMode.addEventListener('change', ()=>{ if(!selectedItem||selectedItem.dataset.type!=='question') return; selectedItem.dataset.qmode=propQuestionMode.value; renderQuestionCardFromItem(selectedItem); scheduleAutosave(); });
+
+    saveHotspotBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!selectedHotspot) return; selectedHotspot.dataset.title=hotspotTitle.value; selectedHotspot.dataset.note=hotspotNote.value; selectedHotspot.dataset.styleVariant=hotspotStyleSelect.value; selectedHotspot.textContent=hotspotTitle.value?hotspotTitle.value:'+'; applyHotspotStyle(selectedHotspot); scheduleAutosave(); });
+    deleteHotspotBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!selectedHotspot) return; selectedHotspot.remove(); hideHotspotEditor(); scheduleAutosave(); });
+    saveQuestionBtn.addEventListener('pointerdown', e=>{
+      e.preventDefault();
+      if(!selectedQuestionItem || appMode !== 'build') return;
+      selectedQuestionItem.dataset.qtitle = questionTitleInput.value || 'Question';
+      selectedQuestionItem.dataset.qprompt = questionTextInput.value || 'Write your question here...';
+      selectedQuestionItem.dataset.qoptions = JSON.stringify([
+        questionOption1.value || 'Option A',
+        questionOption2.value || 'Option B',
+        questionOption3.value || 'Option C',
+        questionOption4.value || 'Option D'
+      ]);
+      selectedQuestionItem.dataset.qcorrect = questionCorrectSelect.value || '0';
+      selectedQuestionItem.dataset.qfeedback = questionAnswerInput.value || 'Well done!';
+      selectedQuestionItem.dataset.name = questionTitleInput.value || 'Question';
+      renderQuestionCardFromItem(selectedQuestionItem);
+      refreshLayersPanel();
+      scheduleAutosave();
+    });
+    deleteQuestionBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!selectedQuestionItem||appMode!=='build') return; selectedQuestionItem.remove(); hideQuestionEditor(); if(selectedItem===selectedQuestionItem) deselectItem(); refreshLayersPanel(); scheduleAutosave(); });
+
+    [hotspotEditor,questionEditor,floatingToolbar,propertiesPanel,scenePanel,layersPanel,historyPanel].forEach(el=>el.addEventListener('pointerdown', e=>e.stopPropagation()));
+
+    folderItems.forEach(original=>{ original.addEventListener('pointerdown', e=>{ const widgetMap={'widget-timer-master':'timer','widget-scoreboard-master':'scoreboard','widget-hotspot-tool-master':'hotspot-tool','widget-text-tool-master':'text-tool','widget-media-tool-master':'media-tool'}; if(widgetMap[original.id]){ if(currentTool!=='move'||sidebarCollapsed) return; const stageRect=stage.getBoundingClientRect(); const x=e.clientX-stageRect.left-80, y=e.clientY-stageRect.top-30; let item=null; if(widgetMap[original.id]==='timer') item=createTimerItem(x,y); if(widgetMap[original.id]==='scoreboard') item=createScoreboardItem(x,y); if(widgetMap[original.id]==='text-tool') item=createTextItem(x,y,'default'); if(widgetMap[original.id]==='media-tool') item=createMediaItem(x,y); if(widgetMap[original.id]==='hotspot-tool'&&appMode==='build'){ enterHotspotMode(); return; } if(item){ selectItem(item); pushHistory(item.dataset.type+' added'); } return; } if(currentTool!=='move'||sidebarCollapsed) return; if(itemFolderMap[original.id]!==activeFolder) return; if(!(lessonResourcesOpen&&earlyYearsOpen)) return; const rect=original.getBoundingClientRect(), stageRect=stage.getBoundingClientRect(); const item=createImageItemFromOriginal(original, rect.left-stageRect.left, rect.top-stageRect.top); const offsetX=e.clientX-rect.left, offsetY=e.clientY-rect.top; item.setPointerCapture(e.pointerId); function move(ev){ let x=ev.clientX-stageRect.left-offsetX, y=ev.clientY-stageRect.top-offsetY; if(snapEnabled){ x=snapValue(x); y=snapValue(y); } item.style.left=x+'px'; item.style.top=y+'px'; repositionFloatingToolbar(); updatePropertiesPanelPosition(); updateSpotlight(); cloneBin.classList.toggle('active',isOverBin(item)); } function end(){ if(isOverBin(item)){ item.remove(); if(selectedItem===item) deselectItem(); } cloneBin.classList.remove('active'); item.removeEventListener('pointermove',move); item.removeEventListener('pointerup',end); item.removeEventListener('pointercancel',end); pushHistory('Image added'); scheduleAutosave(); refreshLayersPanel(); } item.addEventListener('pointermove',move); item.addEventListener('pointerup',end); item.addEventListener('pointercancel',end); }); });
+
+    stage.addEventListener('pointerdown', e=>{ const blocked=e.target.closest('#sidebar,#topControls,#teacherMenu,#teacherToggle,#annotateToolbar,#sidebarReopenBtn,#hotspotEditor,#questionEditor,#floatingToolbar,#propertiesPanel,#scenePanel,#layersPanel,#historyPanel,.item,.hotspot'); if(blocked) return; closeTransientPanels(); const stageRect=stage.getBoundingClientRect(); const x=e.clientX-stageRect.left-20, y=e.clientY-stageRect.top-20; if(addHotspotMode){ createHotspot(x,y); enterMoveMode(); return; } if(addQuestionMode){ createQuestionItem(x,y); enterMoveMode(); pushHistory('Question added'); return; } if(addTextMode){ const item=createTextItem(x,y,pendingTextVariant||'default'); selectItem(item); enterMoveMode(); pushHistory('Text added'); return; } if(addMediaMode){ const item=createMediaItem(x,y); selectItem(item); enterMoveMode(); pushHistory('Media added'); return; } deselectItem(); hideHotspotEditor(); hideQuestionEditor(); });
+
+    undoBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); undo(); }); redoBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); redo(); });
+    groupBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); groupSelected(); }); ungroupBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); ungroupSelected(); }); alignLeftBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); alignSelectedLeft(); }); alignTopBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); alignSelectedTop(); }); distributeHBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); distributeSelectedH(); }); distributeVBtn.addEventListener('pointerdown', e=>{ e.preventDefault(); distributeSelectedV(); });
+
+    document.addEventListener('keydown', e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'&&!e.shiftKey){ e.preventDefault(); undo(); } if(((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y')||((e.ctrlKey||e.metaKey)&&e.shiftKey&&e.key.toLowerCase()==='z')){ e.preventDefault(); redo(); } if(e.key==='Delete'&&selectedItems.size){ Array.from(selectedItems).forEach(it=>it.remove()); deselectItem(); refreshLayersPanel(); scheduleAutosave(); } if(e.key==='Escape'){ enterMoveMode(); deselectItem(); hideHotspotEditor(); hideQuestionEditor(); } });
+
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('load', ()=>{ layoutFolderItems(); layoutWidgetMasters(); positionAnnotateToolbar(); });
+    folderItems.forEach(item=>{ if(item.tagName === 'IMG'){ item.addEventListener('load', ()=>{ if(!sidebarCollapsed) layoutFolderItems(); }); } });
+
+    setStageBackgroundImage('background.jpg','Background 1');
+    updateAnnotateToolUI();
+    applyFolderContentVisibility(); updateSidebarState(); updateScenePanelState(); updatePresentationMode(); resizeCanvas(); enterMoveMode(); setAppMode('build'); refreshSceneList(); refreshLayersPanel();
+    pushHistory('Initial state');
+    const autosave = getAutosaveScene(); if (autosave && confirm('Recover autosaved scene from this browser?')) loadSceneById(AUTOSAVE_SCENE_ID);
+  </script>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
